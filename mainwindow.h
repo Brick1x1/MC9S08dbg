@@ -28,13 +28,13 @@ private:
    QPushButton *m_btn_update_mem_view;
 
    QHBoxLayout *memViewLayout;
-   QPlainTextEdit *plainTextHexView;
+   //QPlainTextEdit *plainTextHexView;
    QPlainTextEdit *plainTextDisassemble;
    QScrollBar* scrollBarV;
 
    simMC9S08AC60 *cpu;
 
-   void WriteHexViewContent(unsigned char *program_memory,int program_size);
+   //void WriteHexViewContent(unsigned char *program_memory,int program_size);
 
    void CPUSingleStep();
 

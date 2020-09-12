@@ -120,7 +120,7 @@ simMC9S08AC60::simMC9S08AC60(unsigned char *p_memory)
    memory[0x4A] |= 0x08; //Set bit 3 of reg. 'ICGS1'  bit 'LOCK', means: FLL Engaged Internal Locked
 
    // Before 0x1 and 0x72, bypass loop, which exists at 0x263
-   memory[0xF667] = 0x02; memory[0xF668] = 0x61;
+   memory[0xF667] = 0x02; memory[0xF668] = 0x5E;
 
    //Short loop from B8 hex to 4
    memory[0xF6D6] = 0x04;

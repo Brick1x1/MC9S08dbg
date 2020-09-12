@@ -9,6 +9,7 @@ qtCustomTextArea::qtCustomTextArea(QWidget *parent, QScrollBar *scrollBar) : QWi
 
    QFont font = this->font();
    font.setFamily("Courier New");
+
    this->setFont(font);
 
    QFontMetrics qFontMetrics(font); // =   this->fontMetrics();
@@ -312,14 +313,17 @@ void qtCustomTextArea::WriteViewContent()
    buffer[1]=0;
 
    painter.setBackgroundMode(Qt::OpaqueMode);
-   painter.setBackground(QColor::fromRgb(0xC0,0xC0,0xFF));
+   //painter.setBackground(QColor::fromRgb(0xC0,0xC0,0xFF));
+   painter.setBackground(QColor::fromRgb(0x30,0x8C,0xC6));
+   //painter.setBackground(Qt::blue);
+   painter.setPen(Qt::white);
    painter.drawText(tempX,tempY-3,buffer);
 
 
 
-   painter.setPen(Qt::red);
+   /*painter.setPen(Qt::red);
    painter.drawLine(tempX,tempY,tempX+8,tempY);
-   painter.setPen(Qt::black);
+   painter.setPen(Qt::black);*/
 
 
 }

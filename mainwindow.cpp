@@ -27,25 +27,22 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
    queryLayout->addWidget(m_button);
    queryLayout->addWidget(m_btn_update_mem_view);
 
-   plainTextHexView = new QPlainTextEdit();
+   /*plainTextHexView = new QPlainTextEdit();
    QTextDocument *doc = plainTextHexView->document();
    QFont font = doc->defaultFont();
    font.setFamily("Courier New");
-   doc->setDefaultFont(font);
+   doc->setDefaultFont(font);*/
 
 
    plainTextDisassemble = new QPlainTextEdit();
-   doc = plainTextDisassemble->document();
-   font = doc->defaultFont();
+   QTextDocument *doc = plainTextDisassemble->document();
+   QFont font = doc->defaultFont();
    font.setFamily("Courier New");
    doc->setDefaultFont(font);
 
    char xxxstr[50];
    sprintf(xxxstr,"Font size: %d",font.pointSize());
    plainTextDisassemble->appendPlainText(xxxstr);
-
-
-
 
    QHBoxLayout *memViewLayout = new QHBoxLayout();
 
@@ -87,13 +84,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
    cpu = new simMC9S08AC60(file_content);
 
    //Write memory view
-   WriteHexViewContent(cpu->memory,0x10000);
+   //WriteHexViewContent(cpu->memory,0x10000);
 
    hexView->setContent(cpu->memory,0x10000);
 
    //180 single step
-   for(int i=0;i<180;i++)
-      CPUSingleStep();
+   /*for(int i=0;i<180;i++)
+      CPUSingleStep();*/
 
  }
 
@@ -130,15 +127,16 @@ void MainWindow::CPUSingleStep()
    sprintf(str2,"%-28s %-8s %s / %s",str,cpu->getAddressingModeText(),cpu->getConditionCodeRegisterText(),cpu->getCPURegisterText());
 
    plainTextDisassemble->appendPlainText(str2);
+
+   hexView->update();
 }
 
 void MainWindow::btnUpdateHexView()
 {
-   WriteHexViewContent(cpu->memory,0x10000);
 }
 
 
-void MainWindow::WriteHexViewContent(unsigned char *program_memory,int program_size)
+/*void MainWindow::WriteHexViewContent(unsigned char *program_memory,int program_size)
 {
    char buffer [100];
    buffer[99] = 0;
@@ -180,4 +178,4 @@ void MainWindow::WriteHexViewContent(unsigned char *program_memory,int program_s
        program_counter++;
    }
 
-}
+}*/
