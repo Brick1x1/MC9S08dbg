@@ -1,2 +1,10 @@
 *.o
+moc*
+.qmake.stash
+MC9S08dbg
+Makefile
+WAE20351F_S19_with_comments.txt
+debug with comments.txt
+sign_test.c
+
 
