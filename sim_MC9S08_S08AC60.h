@@ -11,18 +11,24 @@ class simMC9S08AC60
 
       simMC9S08AC60(unsigned char *p_memory);
       ~simMC9S08AC60();
-      char *getProgramCounterText();
+      char *getProgramCounterAsText();
+      unsigned short getProgramCounterPrevious();
+
       char *getBytecodeText();
       char *getAddressingModeText();
       char *getDisassemblyText();
       char *getConditionCodeRegisterText();
       char *getCPURegisterText();
+      int getInstructionLength();
       //int ReadS19File(string filename,unsigned char *memory);
+
+      int instructionCounter = 0;
 
       void step();
 
       // PROGRAM COUNTER
       unsigned short PC;
+      unsigned short PC_previous;
 
       unsigned char *memory;
       /*int HexcharToInt(char ch);
@@ -62,6 +68,7 @@ class simMC9S08AC60
       char disassembleText[100];
       char conditionCodeRegisterText[100];
       char cpuRegisterText[50];
+      int instructionLength = 0;
 
       void getAddressingModeAsText(char addressingMode, char *buffer);
 

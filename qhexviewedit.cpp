@@ -193,29 +193,49 @@ void QHexViewEdit::WriteViewContent()
       painter.setPen(Qt::black);
    }*/
 
+   painter.setBackgroundMode(Qt::OpaqueMode);
+
    while(program_counter < program_counter_max)
    {
        lineItemNo = program_counter % 16;
 
        if(lineItemNo == 0)
        {
-          sprintf(&buffer[linePosCounter], " %04X  ", program_counter);
+          sprintf(buffer, " %04X", program_counter);
+          painter.drawText(linePosCounter * charWidth,14 +(lineNo * interLineHeight),buffer);
           linePosCounter = 7;
        }
 
        if(lineItemNo == 8)
        {
-          sprintf(&buffer[linePosCounter], "- ");
+          sprintf(buffer, "-");
+          painter.drawText(linePosCounter * charWidth,14 +(lineNo * interLineHeight),buffer);
           linePosCounter += 2;
        }
 
-       sprintf(&buffer[linePosCounter], "%02X ", m_content[program_counter]);
+       if(m_content[program_counter] == 0x81)
+       {
+          painter.setBackground(QColor::fromRgb(0x30,0x8C,0xC6));
+          painter.setPen(Qt::white);
+
+          sprintf(buffer, "%02X", m_content[program_counter]);
+          painter.drawText(linePosCounter * charWidth,14 +(lineNo * interLineHeight),buffer);
+
+          painter.setBackground(Qt::white);
+          painter.setPen(Qt::black);
+       }
+       else
+       {
+          sprintf(buffer, "%02X", m_content[program_counter]);
+          painter.drawText(linePosCounter * charWidth,14 +(lineNo * interLineHeight),buffer);
+       }
+
        linePosCounter += 3;
 
        if(lineItemNo == 15 || program_counter == (program_counter_max-1))
        {
-          buffer[linePosCounter]=0;
-          painter.drawText(0,14 +(lineNo * interLineHeight),buffer);
+          //buffer[linePosCounter]=0;
+          //painter.drawText(0,14 +(lineNo * interLineHeight),buffer);
 
           lineNo++;
           linePosCounter = 0;

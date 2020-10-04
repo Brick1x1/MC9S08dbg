@@ -74,7 +74,7 @@ simMC9S08AC60::simMC9S08AC60(unsigned char *p_memory)
    char tempInstAddressingMode1st[256] = { AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, //0x00
                                            AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, //0x10
                                            AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, //0x20
-                                           AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_EXT, AM_DIR, //0x30
+                                           AM_DIR, AM_DIR, AM_EXT, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_EXT, AM_DIR, //0x30
                                            AM_INH, AM_IMM, AM_INH, AM_INH, AM_INH, AM_IMM, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_DIR, AM_INH, //0x40
                                            AM_INH, AM_IMM, AM_INH, AM_INH, AM_INH, AM_DIR, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_DIR, AM_INH, //0x50
                                            AM_IX1, AM_I1P, AM_INH, AM_IX1, AM_IX1, AM_IMM, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IMM, AM_IX1, //0x60
@@ -223,11 +223,19 @@ void simMC9S08AC60::step()
    unsigned char opr8a_temp;
    unsigned char A7,M7,R7,A3,M3,R3;
 
+   instructionCounter++;
+
    sprintf(programCounterText,"%04X",PC);
 
 
    //write adressing mode text
    setAddressingModeText(PC);
+
+   //Set instruction length
+   if(memory[PC] != 0x9E)
+      instructionLength = instructions[memory[PC]]->noOfBytes;
+   else
+      instructionLength = instructionsExt[memory[PC+1]]->noOfBytes;
 
    //Write bytecode text
    if(memory[PC] != 0x9E)
@@ -235,6 +243,7 @@ void simMC9S08AC60::step()
    else
       setBytecodeText(instructionsExt[memory[PC+1]]->noOfBytes, memory + PC);
 
+   PC_previous = PC;
 
    //opcode
    switch(memory[PC])
@@ -346,6 +355,43 @@ void simMC9S08AC60::step()
          if(H==0 && X==0) STATUS_Z = 1; else STATUS_Z = 0;
          break;
 
+      case 0x38: // LSL opr8a (DIR) - Logical Shift Left
+         PC++;
+         opr8a_temp = memory[PC++];
+         m_temp = memory[opr8a_temp];
+         sprintf(disassembleText,"LSL %02X",opr8a_temp);
+         STATUS_C = (m_temp >> 7) & 0x01;
+         RESULT_temp = m_temp << 1;
+         STATUS_N = (RESULT_temp >> 7) & 0x01;
+         STATUS_V = STATUS_N ^ STATUS_C;
+         if(RESULT_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
+         memory[opr8a_temp] = RESULT_temp;
+         break;
+
+      case 0x39: // ROL opr8a (DIR) - Rotate Left through Carry
+         PC++;
+         opr8a_temp = memory[PC++];
+         m_temp = memory[opr8a_temp];
+         sprintf(disassembleText,"ROL %02X",opr8a_temp);
+         RESULT_temp = (m_temp << 1) + STATUS_C;
+         STATUS_C = (m_temp >> 7) & 0x01;
+         STATUS_N = (RESULT_temp >> 7) & 0x01;
+         STATUS_V = STATUS_N ^ STATUS_C;
+         if(RESULT_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
+         memory[opr8a_temp] = RESULT_temp;
+         break;
+
+      case 0x3C: // INC opr8a (DIR) - Increment
+         PC++;
+         opr8a_temp = memory[PC++];
+         RESULT_S_temp = memory[opr8a_temp];
+         memory[opr8a_temp] = ++RESULT_S_temp & 0x00FF;
+         sprintf(disassembleText,"INC %02X",opr8a_temp);
+         if(RESULT_S_temp == 0x80) STATUS_V = 1;else STATUS_V = 0;
+         STATUS_N = (RESULT_S_temp >> 7) & 0x01;
+         if(RESULT_S_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
+         break;
+
       case 0x3F: // CLR opr8a (DIR) - Clear
          PC++;
          opr8a_temp = memory[PC++];
@@ -354,6 +400,16 @@ void simMC9S08AC60::step()
          STATUS_V = 0;
          STATUS_N = 0;
          STATUS_Z = 1;
+         break;
+
+      case 0x41: // CBEQA #opr8i,rel  CBEQX #opr8i,rel IMM - Compare and Branch if Equal
+         PC++;
+         IMM_temp = memory[PC++];
+         ADDR_temp = memory[PC++];
+         sprintf(disassembleText,"CBEQA %02X,%04X",IMM_temp,PC + (char)ADDR_temp);
+         if(IMM_temp == A) {
+               PC = PC + (char)ADDR_temp;
+         }
          break;
 
       case 0x44: // LSRA (INH-A) - Logical Shift Right
@@ -509,6 +565,19 @@ void simMC9S08AC60::step()
          sprintf(disassembleText,"RTS #%04X",PC);
          break;
 
+      case 0x84: // TAP (INH) - Transfer Accumulator to Processor Status Byte
+         PC +=1;
+         STATUS_V = (A & 0x80) >> 7; STATUS_H = (A & 0x10) >> 4; STATUS_I = (A & 0x08) >> 3;
+         STATUS_N = (A & 0x04) >> 2; STATUS_Z = (A & 0x02) >> 1; STATUS_C = (A & 0x01);
+         sprintf(disassembleText,"TAP");
+         break;
+
+      case 0x85: // TPA (INH) - Transfer Processor Status Byte to Accumulator
+         PC +=1;
+         A = (STATUS_V << 7) + (STATUS_H << 4) + (STATUS_I << 3) + (STATUS_N << 2) + (STATUS_Z << 1) + (STATUS_C) + 0x60;
+         sprintf(disassembleText,"TPA");
+         break;
+
       case 0x86: // PULA (INH) - Pull Accumulator from Stack
          PC +=1;
          SP++;
@@ -529,6 +598,12 @@ void simMC9S08AC60::step()
          sprintf(disassembleText,"PULX");
          break;
 
+      case 0x89: // PSHX (INH) - Push X (Index Register Low) onto Stack
+         PC += 1;
+         memory[SP--] = X;
+         sprintf(disassembleText,"PSHX");
+         break;
+
       case 0x8A: // PULH (INH) - Pull H (Index Register High) from Stack
          PC +=1;
          SP++;
@@ -536,6 +611,11 @@ void simMC9S08AC60::step()
          sprintf(disassembleText,"PULH");
          break;
 
+      case 0x8B: // PSHH (INH) - Push H (Index Register High) onto Stack
+         PC += 1;
+         memory[SP--] = H;
+         sprintf(disassembleText,"PSHH");
+         break;
 
       case 0x94: // TXS (INH) - Transfer Index Register to Stack Pointer
          PC +=1;
@@ -571,10 +651,44 @@ void simMC9S08AC60::step()
          STATUS_I = 1;
          break;
 
+      case 0x9D: // NOP (INH) - No Operation
+         PC++;
+         sprintf(disassembleText,"NOP");
+         break;
+
+
       case 0x9E: // Page 2
          PC++;
          switch(memory[PC])
          {
+            case 0x69: // ROL oprx8,SP (SP1) - Rotate Left through Carry
+               PC++;
+               oprx8_temp = memory[PC++];
+               m_temp = memory[SP + oprx8_temp];
+               sprintf(disassembleText,"ROL %04X",SP + oprx8_temp);
+
+               RESULT_temp = (m_temp << 1) + STATUS_C;
+               STATUS_C = (m_temp >> 7) & 0x01;
+               STATUS_N = (RESULT_temp >> 7) & 0x01;
+               STATUS_V = STATUS_N ^ STATUS_C;
+               if(RESULT_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
+               memory[SP + oprx8_temp] = RESULT_temp;
+               break;
+
+            case 0x6B: // DBNZ oprx8,SP,rel (SP1) - Decrement and Branch if Not Zero
+               PC++;
+               oprx8_temp = memory[PC++];
+               rel_temp = memory[PC++];
+               memory[SP + oprx8_temp]--;
+               MEM_temp = memory[SP + oprx8_temp];
+
+               sprintf(disassembleText,"DBNZ %04X,%d",SP + oprx8_temp,(char)rel_temp);
+               MEM_temp--;
+               if(MEM_temp != 0) {
+                     PC = PC + (char)rel_temp;
+               }
+               break;
+
             case 0xAE: // LDHX ,X (IX) - Load Index Register from Memory
                PC++;
                PCH_temp = memory[H * 0x100 + X];
@@ -601,6 +715,37 @@ void simMC9S08AC60::step()
                else STATUS_Z = 0;
                break;
 
+            case 0xE1: // CMP oprx8,SP (SP1) - Compare Accumulator with Memory
+               PC++;
+               oprx8_temp = memory[PC++];
+               r_temp = memory[SP + oprx8_temp];
+
+               RESULT_temp = (signed char)A - (signed char)r_temp;
+
+               //V flag - 2's complement overflow
+               STATUS_V = ( (A >> 7) && !(r_temp >> 7) && !(RESULT_temp >> 7)) ||
+                          (!(A >> 7) &&  (r_temp >> 7) &&  (RESULT_temp >> 7));  // A7 & /M7 & /R7 | /A7 & M7 & /R7
+
+               STATUS_N = (RESULT_temp >> 7);
+
+               if(RESULT_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
+
+               if(r_temp > A) STATUS_C = 1; else STATUS_C = 0;
+
+               sprintf(disassembleText,"CMP %02X,%04X",oprx8_temp,SP);
+               break;
+
+
+            case 0xE6: // LDA oprx8,SP (SP1) - Load Accumulator from Memory
+               PC++;
+               oprx8_temp = memory[PC++];
+               A = memory[SP + oprx8_temp];
+               sprintf(disassembleText,"LDA %04X",SP + oprx8_temp);
+               STATUS_V = 0;
+               STATUS_N = (A >> 7) & 0x01;
+               if(A==0) STATUS_Z = 1; else STATUS_Z = 0;
+               break;
+
             case 0xE7: // STA oprx8,SP (SP1) - Store Accumulator in Memory
                PC++;
                oprx8_temp = memory[PC++];
@@ -611,8 +756,56 @@ void simMC9S08AC60::step()
                if(A==0) STATUS_Z = 1; else STATUS_Z = 0;
                break;
 
+            case 0xF3: // CPHX oprx8,SP (SP1) - Compare Index Register with Memory
+               PC++;
+               oprx8_temp = memory[PC++];
+
+               sprintf(disassembleText,"CPHX %02X,%04X",oprx8_temp,SP);
+
+               MEM_temp = memory[SP + oprx8_temp] * 100 + memory[SP + oprx8_temp + 1];
+               INDEX_temp = H * 0x100 + X;
+
+               RESULT_S_temp = (short)INDEX_temp - (short)MEM_temp;
+
+               //V flag - 2's complement overflow
+               STATUS_V = ( (H>>7) && !(MEM_temp>>15) && !(RESULT_S_temp>>15)) ||
+                          (!(H>>7) &&  (MEM_temp>>15) &&  (RESULT_S_temp>>15));  // H7 & /M15 & /R15 | /H7 & M15 & R15
+
+               STATUS_N = (RESULT_S_temp>>15);
+
+               if(RESULT_S_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
+
+               if(MEM_temp > INDEX_temp) STATUS_C = 1; else STATUS_C = 0;
+
+               break;
+
+
+            case 0xFE: // LDHX oprx8,SP (SP1) - Load Index Register from Memory
+               PC++;
+               oprx8_temp = memory[PC++];
+               PCH_temp = memory[SP + oprx8_temp];
+               PCL_temp = memory[SP + oprx8_temp + 1];
+               sprintf(disassembleText,"LDHX %02X,%04X",oprx8_temp,SP);
+               H = PCH_temp;
+               X = PCL_temp;
+               STATUS_V = 0;
+               STATUS_N = (H >> 7) & 0x01;
+               if(H == 0 && X == 0) STATUS_Z = 1; else STATUS_Z = 0;
+               break;
+
+            case 0xFF: // STHX oprx8,SP (SP1) - Store Index Register
+               PC++;
+               oprx8_temp = memory[PC++];
+               memory[SP + oprx8_temp] = H;
+               memory[SP + oprx8_temp + 1] = X;
+               sprintf(disassembleText,"STHX %02X,%04X",oprx8_temp,SP);
+               STATUS_V = 0;
+               STATUS_N = (H >> 7) & 0x01;
+               if(H == 0 && X == 0) STATUS_Z = 1; else STATUS_Z = 0;
+               break;
+
             default:
-               sprintf(disassembleText,"Unknown opcode: 9E%02X",memory[PC]);
+               sprintf(disassembleText,"Unknown opcode: 9E%02X, inst. count: %d",memory[PC],instructionCounter);
                PC--;
                break;
          }
@@ -623,6 +816,19 @@ void simMC9S08AC60::step()
          PC++;
          A = X;
          sprintf(disassembleText,"TXA");
+         break;
+
+      case 0xA0: // SUB #opr8i (IMM) - Subtract
+         PC++;
+         m_temp = memory[PC++];
+         sprintf(disassembleText,"SUB #%02X",m_temp);
+         r_temp = A - m_temp;
+         A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
+         STATUS_V = (A7 && !M7 && !R7) || (!A7 && M7 && R7);  // A7 & !M7 & !R7 | !A7 & M7 & R7 - flag - 2's complement overflow
+         STATUS_N = R7;
+         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
+         STATUS_C = (!A7 && M7) || (M7 && R7) || (R7 && !A7);  // !A7 & M7 | M7 & R7 | R7 & !A7
+         A = r_temp;
          break;
 
       case 0xA1: // CMP #opr8i IMM - Compare Accumulator with Memory
@@ -712,7 +918,7 @@ void simMC9S08AC60::step()
 
       case 0xB6: // LDA opr8a (DIR) - Load Accumulator from Memory
          PC++;
-         opr8a_temp = PC++;
+         opr8a_temp = memory[PC++];
          A = memory[opr8a_temp];
          sprintf(disassembleText,"LDA %02X",opr8a_temp);
          STATUS_V = 0;
@@ -722,7 +928,7 @@ void simMC9S08AC60::step()
 
       case 0xB7: // STA opr8a (DIR) - Store Accumulator in Memory
          PC++;
-         opr8a_temp = PC++;
+         opr8a_temp = memory[PC++];
          memory[opr8a_temp] = A;
          sprintf(disassembleText,"STA %02X",opr8a_temp);
          STATUS_V = 0;
@@ -784,6 +990,44 @@ void simMC9S08AC60::step()
          else STATUS_Z = 0;
          break;
 
+      case 0xE0: // SUB oprx8,X (IX1) - Subtract
+         PC++;
+         oprx8_temp = memory[PC++];
+         m_temp = memory[H * 0x100 + X + oprx8_temp];
+         sprintf(disassembleText,"SUB %04X",H*0x100+X+oprx8_temp);
+         r_temp = A - m_temp;
+         A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
+         STATUS_V = (A7 && !M7 && !R7) || (!A7 && M7 && R7);  // A7 & !M7 & !R7 | !A7 & M7 & R7 - flag - 2's complement overflow
+         STATUS_N = R7;
+         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
+         STATUS_C = (!A7 && M7) || (M7 && R7) || (R7 && !A7);  // !A7 & M7 | M7 & R7 | R7 & !A7
+         A = r_temp;
+         break;
+
+      case 0xE2: // SBC oprx8,X (IX1) - Subtract with Carry
+         PC++;
+         oprx8_temp = memory[PC++];
+         m_temp = memory[H * 0x100 + X + oprx8_temp];
+         sprintf(disassembleText,"SBC %04X",H*0x100+X+oprx8_temp);
+         r_temp = A - m_temp - STATUS_C;
+         A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
+         STATUS_V = (A7 && !M7 && !R7) || (!A7 && M7 && R7);  // A7 & !M7 & !R7 | !A7 & M7 & R7 - flag - 2's complement overflow
+         STATUS_N = R7;
+         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
+         STATUS_C = (!A7 && M7) || (M7 && R7) || (R7 && !A7);  // !A7 & M7 | M7 & R7 | R7 & !A7
+         A = r_temp;
+         break;
+
+      case 0xE6: // LDA oprx8,X (IX1) - Load Accumulator from Memory
+         PC++;
+         oprx8_temp = memory[PC++];
+         A = memory[H * 0x100 + X + oprx8_temp];
+         STATUS_V = 0;
+         STATUS_N = (A >> 7) & 0x01;
+         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
+         sprintf(disassembleText,"LDA %02X,%04X",oprx8_temp,H * 0x100 + X);
+         break;
+
       case 0xE7: // STA oprx8,X (IX1) - Store Accumulator in Memory
          PC++;
          oprx8_temp = memory[PC++];
@@ -826,6 +1070,30 @@ void simMC9S08AC60::step()
          sprintf(disassembleText,"ADD %02X,%04X",oprx8_temp,H*0x100+X);
          break;
 
+      case 0xEE: // LDX oprx8,X (IX1) - Load X (Index Register Low) from Memory
+         PC++;
+         oprx8_temp = memory[PC++];
+         X_temp = memory[H * 0x100 + X + oprx8_temp];
+         STATUS_V = 0;
+         STATUS_N = (X_temp >> 7) & 0x01;
+         if(X_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
+         sprintf(disassembleText,"LDX %02X,%04X",oprx8_temp,H * 0x100 + X);
+         X = X_temp;
+         break;
+
+      case 0xF2: // SBC oprx8,X (IX) - Subtract with Carry
+         PC++;
+         m_temp = memory[H * 0x100 + X];
+         sprintf(disassembleText,"SBC %04X",H*0x100+X);
+         r_temp = A - m_temp - STATUS_C;
+         A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
+         STATUS_V = (A7 && !M7 && !R7) || (!A7 && M7 && R7);  // A7 & !M7 & !R7 | !A7 & M7 & R7 - flag - 2's complement overflow
+         STATUS_N = R7;
+         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
+         STATUS_C = (!A7 && M7) || (M7 && R7) || (R7 && !A7);  // !A7 & M7 | M7 & R7 | R7 & !A7
+         A = r_temp;
+         break;
+
       case 0xF6: // LDA ,X (IX) - Load Accumulator from Memory
          PC++;
          A = memory[H * 0x100 + X];
@@ -847,7 +1115,7 @@ void simMC9S08AC60::step()
 
       case 0xFC: // JMP ,X IX - Jump
          PC++;
-         PC = (memory[H * 0x100 + X] * 0x100) + memory[H * 0x100 + X + 1];
+         PC = H * 0x100 + X;
          sprintf(disassembleText,"JMP %04X",H * 0x100 + X);
          break;
 
@@ -856,12 +1124,12 @@ void simMC9S08AC60::step()
          PC++;
          memory[SP--] = (PC & 0x00FF);
          memory[SP--] = (PC & 0xFF00) >> 8;
-         PC = (memory[H * 0x100 + X] * 0x100) + memory[H * 0x100 + X + 1];
-         sprintf(disassembleText,"JSR #%04X",H * 0x100 + X);
+         PC = H * 0x100 + X;
+         sprintf(disassembleText,"JSR %04X",H * 0x100 + X);
          break;
 
       default:
-         sprintf(disassembleText,"Unknown opcode: %X",memory[PC]);
+         sprintf(disassembleText,"Unknown opcode: %X, inst. count: %d",memory[PC],instructionCounter);
          break;
 
    }
@@ -884,9 +1152,14 @@ char *simMC9S08AC60::getAddressingModeText()
    return addressingModeText;
 }
 
-char *simMC9S08AC60::getProgramCounterText()
+char *simMC9S08AC60::getProgramCounterAsText()
 {
    return programCounterText;
+}
+
+unsigned short simMC9S08AC60::getProgramCounterPrevious()
+{
+   return PC_previous;
 }
 
 
@@ -911,6 +1184,11 @@ char *simMC9S08AC60::getCPURegisterText()
 {
    sprintf(cpuRegisterText,"A:%02X H:%02X X:%02X SP:%04X PC:%04X",A,H,X,SP,PC);
    return cpuRegisterText;
+}
+
+int simMC9S08AC60::getInstructionLength()
+{
+   return instructionLength;
 }
 
 void simMC9S08AC60::getAddressingModeAsText(char addressingMode, char *buffer)

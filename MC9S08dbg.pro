@@ -25,10 +25,16 @@ SOURCES += main.cpp
 SOURCES += mainwindow.cpp
 SOURCES += sim_MC9S08_File.cpp
 SOURCES += sim_MC9S08_S08AC60.cpp
-SOURCES += qt_custom_textArea.cpp
+SOURCES += qdisassembleview.cpp
 SOURCES += qhexviewedit.cpp
+SOURCES += hcs08_instruction.cpp
+SOURCES += hcs08_programinstruction.cpp
+
+
 HEADERS += mainwindow.h
 HEADERS += sim_MC9S08_File.h
 HEADERS += sim_MC9S08_S08AC60.h
-HEADERS += qt_custom_textArea.h
+HEADERS += qdisassembleview.h
 HEADERS += qhexviewedit.h
+HEADERS += hcs08_instruction.h
+HEADERS += hcs08_programinstruction.h
