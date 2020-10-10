@@ -29,7 +29,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
    fileS19->ReadS19File("WAE20351F.S19",file_content);
 
    //Initialize CPU simulation
-   simMC9S08AC60 *cpu = new simMC9S08AC60(file_content);
+   cpu = new simMC9S08AC60(file_content);
 
 
    QHBoxLayout *queryLayout = new QHBoxLayout();
