@@ -65,10 +65,16 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
       disassemblyView->CPUSingleStep();*/
 
    //disassemblyView->DisassembleAll();
-   disassemblyView->DisassembleRange(0x0870,0x0E92);
-   disassemblyView->DisassembleRange(0x1860,0x1A00);
+
+   //disassemblyView->DisassembleRange(0x0870,0x08D4);
+   disassemblyView->DisassembleRange(0x0870,0x0E92); //10/10
+   disassemblyView->DisassembleRange(0x1860,0x1A00); //10/10
+
    //disassemblyView->DisassembleRange(0x6200,0xA700);
-   disassemblyView->DisassembleRange(0xF600,0xFF80);
+
+   disassemblyView->DisassembleRange(0xF600,0xFF80); //10/10
+
+   //disassemblyView->DisassembleRange(0xF600,0xF87C); //10/10
 }
 
 void MainWindow::handleButton()
