@@ -29,6 +29,8 @@ SOURCES += qdisassembleview.cpp
 SOURCES += qhexviewedit.cpp
 SOURCES += hcs08_instruction.cpp
 SOURCES += hcs08_programinstruction.cpp
+SOURCES += hcs08_CPURegisters.cpp
+SOURCES += qcpuregisters.cpp
 
 
 HEADERS += mainwindow.h
@@ -38,3 +40,5 @@ HEADERS += qdisassembleview.h
 HEADERS += qhexviewedit.h
 HEADERS += hcs08_instruction.h
 HEADERS += hcs08_programinstruction.h
+HEADERS += hcs08_CPURegisters.h
+HEADERS += qcpuregisters.h

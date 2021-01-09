@@ -4,6 +4,7 @@
 #include "sim_MC9S08_S08AC60.h"
 #include "qhexviewedit.h"
 #include "qdisassembleview.h"
+#include "qcpuregisters.h"
 
 #include <QMainWindow>
 #include <QPushButton>
@@ -31,6 +32,7 @@ private:
    QHBoxLayout *memViewLayout;
    QHexViewEdit *hexViewEdit;
    QDisassembleView *disassemblyView;
+   QCPURegisters *cpuRegisters;
    simMC9S08AC60 *cpu;
 
    //void CPUSingleStep();

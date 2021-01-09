@@ -5,22 +5,7 @@
 
 #include "hcs08_instruction.h"
 #include "sim_MC9S08_S08AC60.h"
-
-
-#define AM_NA     0x00   // Not a valid opcode
-#define AM_DIR    0x01   // Direct addressing mode
-#define AM_EXT    0x02   // Extended addressing mode
-#define AM_IMM    0x03   // Immediate addressing mode
-#define AM_INH    0x04   // Inherent addressing mode
-#define AM_IX0    0x05   // Indexed, no offset addressing mode
-#define AM_IX1    0x06   // Indexed, 8-bit offset addressing mode
-#define AM_IX2    0x07   // Indexed, 16-bit offset addressing mode
-#define AM_IXP    0x08   // Indexed, no offset, post increment addressing mode
-#define AM_I1P    0x09   // Indexed, 8-bit offset, post increment addressing mode
-#define AM_REL    0x0A   // Relative addressing mode
-#define AM_SP1    0x0B   // Stack pointer, 8-bit offset addressing mode
-#define AM_SP2    0x0C   // Stack pointer 16-bit offset addressing mode
-
+#include "hcs08_CPURegisters.h"
 
 using namespace std;
 
@@ -31,27 +16,24 @@ simMC9S08AC60::simMC9S08AC60(unsigned char *p_memory)
    memcpy(memory,p_memory,0x10000);
 
 
-   //Initialize instructions
-   for(int i=0; i < 256; i++) instructions[i] = new hcs08Instruction();
-   for(int i=0; i < 256; i++) instructionsExt[i] = new hcs08Instruction();
+   // Instructionlength
+   char tempInstNoOfBytes[256] = {     3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3, //0x00
+                                       2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, //0x10
+                                       2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, //0x20
+                                       2,3,3,2,2,2,2,2,2,2,2,3,2,2,3,2, //0x30
+                                       1,3,1,1,1,3,1,1,1,1,1,2,1,1,3,1, //0x40
+                                       1,3,1,1,1,2,1,1,1,1,1,2,1,1,2,1, //0x50
+                                       2,3,1,2,2,3,2,2,2,2,2,3,2,2,3,2, //0x60
+                                       1,2,1,1,1,2,1,1,1,1,1,2,1,1,2,1, //0x70
+                                       1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1, //0x80
+                                       2,2,2,2,1,1,3,1,1,1,1,1,1,1,0,1, //0x90
+                                       2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, //0xA0
+                                       2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, //0xB0
+                                       3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3, //0xC0
+                                       3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3, //0xD0
+                                       2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, //0xE0
+                                       1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};//0xF0
 
-   char tempInstNoOfBytes[256] = {  3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3, //0x00
-                                    2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, //0x10
-                                    2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, //0x20
-                                    2,3,3,2,2,2,2,2,2,2,2,3,2,2,3,2, //0x30
-                                    1,3,1,1,1,3,1,1,1,1,1,2,1,1,3,1, //0x40
-                                    1,3,1,1,1,2,1,1,1,1,1,2,1,1,2,1, //0x50
-                                    2,3,1,2,2,3,2,2,2,2,2,3,2,2,3,2, //0x60
-                                    1,2,1,1,1,2,1,1,1,1,1,2,1,1,2,1, //0x70
-                                    1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1, //0x80
-                                    2,2,2,2,1,1,3,1,1,1,1,1,1,1,0,1, //0x90
-                                    2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, //0xA0
-                                    2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, //0xB0
-                                    3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3, //0xC0
-                                    3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3, //0xD0
-                                    2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, //0xE0
-                                    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};//0xF0
-   for(int i=0;i<256;i++) instructions[i]->noOfBytes = tempInstNoOfBytes[i];
    char tempInstExtNoOfBytes[256] = {  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, //0x00
                                        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, //0x10
                                        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, //0x20
@@ -68,34 +50,25 @@ simMC9S08AC60::simMC9S08AC60(unsigned char *p_memory)
                                        4,4,4,4,4,4,4,4,4,4,4,4,0,0,4,4, //0xD0
                                        3,3,3,3,3,3,3,3,3,3,3,3,0,0,3,3, //0xE0
                                        0,0,0,3,0,0,0,0,0,0,0,0,0,0,3,3};//0xF0
-   for(int i=0;i<256;i++) instructionsExt[i]->noOfBytes = tempInstExtNoOfBytes[i];
 
-   //Addressing mode, 1st mode (mov have to addressing modes)
-   char tempInstAddressingMode1st[256] = { AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, //0x00
-                                           AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, //0x10
-                                           AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, //0x20
-                                           AM_DIR, AM_DIR, AM_EXT, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_EXT, AM_DIR, //0x30
-                                           AM_INH, AM_IMM, AM_INH, AM_INH, AM_INH, AM_IMM, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_DIR, AM_INH, //0x40
-                                           AM_INH, AM_IMM, AM_INH, AM_INH, AM_INH, AM_DIR, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_DIR, AM_INH, //0x50
-                                           AM_IX1, AM_I1P, AM_INH, AM_IX1, AM_IX1, AM_IMM, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IMM, AM_IX1, //0x60
-                                           AM_IX0, AM_IXP, AM_INH, AM_IX0, AM_IX0, AM_DIR, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IXP, AM_IX0, //0x70
-                                           AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_NA , AM_INH, AM_INH, //0x80
-                                           AM_REL, AM_REL, AM_REL, AM_REL, AM_INH, AM_INH, AM_EXT, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_NA , AM_INH, //0x90
-                                           AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_NA , AM_REL, AM_IMM, AM_IMM, //0xA0
-                                           AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, //0xB0
-                                           AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, //0xC0
-                                           AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, //0xD0
-                                           AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, //0xE0
-                                           AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0};//0xF0
-   for(int i=0;i<256;i++) instructions[i]->addressingMode1st = tempInstAddressingMode1st[i];
+   //Addressing mode
+   char tempInstAddressingMode1st[256] = {    AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR , AM_DIR, //0x00
+                                              AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR , AM_DIR, //0x10
+                                              AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL, AM_REL , AM_REL, //0x20
+                                              AM_DIR, AM_DIR, AM_EXT, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_EXT , AM_DIR, //0x30
+                                              AM_INH, AM_IMM, AM_INH, AM_INH, AM_INH, AM_IMM, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_DIR , AM_INH, //0x40
+                                              AM_INH, AM_IMM, AM_INH, AM_INH, AM_INH, AM_DIR, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_DIR , AM_INH, //0x50
+                                              AM_IX1, AM_I1P, AM_INH, AM_IX1, AM_IX1, AM_IMM, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IMM , AM_IX1, //0x60
+                                              AM_IX0, AM_IXP, AM_INH, AM_IX0, AM_IX0, AM_DIR, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IXP , AM_IX0, //0x70
+                                              AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_NA , AM_INH , AM_INH, //0x80
+                                              AM_REL, AM_REL, AM_REL, AM_REL, AM_INH, AM_INH, AM_EXT, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_INH, AM_NA  , AM_INH, //0x90
+                                              AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_IMM, AM_NA , AM_REL, AM_IMM , AM_IMM, //0xA0
+                                              AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR, AM_DIR , AM_DIR, //0xB0
+                                              AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT, AM_EXT , AM_EXT, //0xC0
+                                              AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2, AM_IX2 , AM_IX2, //0xD0
+                                              AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1, AM_IX1 , AM_IX1, //0xE0
+                                              AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0, AM_IX0 , AM_IX0};//0xF0
 
-   for(int i=0;i<256;i++) instructions[i]->addressingMode2nd = AM_NA;
-   instructions[0x4E]->addressingMode2nd = AM_DIR;
-   instructions[0x5E]->addressingMode2nd = AM_IXP;
-   instructions[0x6E]->addressingMode2nd = AM_DIR;
-   instructions[0x7E]->addressingMode2nd = AM_DIR;
-
-   //Addressing mode page 2 (starts with opcode 9E), 1st mode
    char tempInstExtAddressingMode1st[256] = { AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , //0x00
                                               AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , //0x10
                                               AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , //0x20
@@ -111,8 +84,210 @@ simMC9S08AC60::simMC9S08AC60(unsigned char *p_memory)
                                               AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_IX1, AM_NA , //0xC0
                                               AM_SP2, AM_SP2, AM_SP2, AM_SP2, AM_SP2, AM_SP2, AM_SP2, AM_SP2, AM_SP2, AM_SP2, AM_SP2, AM_SP2, AM_NA , AM_NA , AM_SP2, AM_SP2, //0xD0
                                               AM_SP1, AM_SP1, AM_SP1, AM_SP1, AM_SP1, AM_SP1, AM_SP1, AM_SP1, AM_SP1, AM_SP1, AM_SP1, AM_SP1, AM_NA , AM_NA , AM_SP1, AM_SP1, //0xE0
-                                              AM_NA , AM_NA , AM_NA , AM_SP1 , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_SP1, AM_SP1 };//0xF0
-   for(int i=0;i<256;i++) instructionsExt[i]->addressingMode1st = tempInstExtAddressingMode1st[i];
+                                              AM_NA , AM_NA , AM_NA , AM_SP1, AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_NA , AM_SP1, AM_SP1 };//0xF0
+
+
+   unsigned char tempInstMnemonic[256] = {  IM_BRSET, IM_BRCLR, IM_BRSET, IM_BRCLR, IM_BRSET, IM_BRCLR, IM_BRSET, IM_BRCLR, IM_BRSET, IM_BRCLR, IM_BRSET, IM_BRCLR, IM_BRSET, IM_BRCLR, IM_BRSET, IM_BRCLR, //0x00
+                                      IM_BSET , IM_BCLR , IM_BSET , IM_BCLR , IM_BSET , IM_BCLR , IM_BSET , IM_BCLR , IM_BSET , IM_BCLR , IM_BSET , IM_BCLR , IM_BSET , IM_BCLR , IM_BSET , IM_BCLR , //0x10
+                                      IM_BRA  , IM_BRN  , IM_BHI  , IM_BLS  , IM_BCC  , IM_BCS  , IM_BNE  , IM_BEQ  , IM_BHCC , IM_BHCS , IM_BPL  , IM_BMI  , IM_BMC  , IM_BMS  , IM_BIL  , IM_BIH  , //0x20
+                                      IM_NEG  , IM_CBEQ , IM_LDHX , IM_COM  , IM_LSR  , IM_STHX , IM_ROR  , IM_ASR  , IM_LSL  , IM_ROL  , IM_DEC  , IM_DBNZ , IM_INC  , IM_TST  , IM_CPHX , IM_CLR  , //0x30
+                                      IM_NEG  , IM_CBEQ , IM_MUL  , IM_COM  , IM_LSR  , IM_LDHX , IM_ROR  , IM_ASR  , IM_LSL  , IM_ROL  , IM_DEC  , IM_DBNZ , IM_INC  , IM_TST  , IM_MOV  , IM_CLR  , //0x40
+                                      IM_NEG  , IM_CBEQ , IM_DIV  , IM_COM  , IM_LSR  , IM_LDHX , IM_ROR  , IM_ASR  , IM_LSL  , IM_ROL  , IM_DEC  , IM_DBNZ , IM_INC  , IM_TST  , IM_MOV  , IM_CLR  , //0x50
+                                      IM_NEG  , IM_CBEQ , IM_NSA  , IM_COM  , IM_LSR  , IM_CPHX , IM_ROR  , IM_ASR  , IM_LSL  , IM_ROL  , IM_DEC  , IM_DBNZ , IM_INC  , IM_TST  , IM_MOV  , IM_CLR  , //0x60
+                                      IM_NEG  , IM_CBEQ , IM_DAA  , IM_COM  , IM_LSR  , IM_CPHX , IM_ROR  , IM_ASR  , IM_LSL  , IM_ROL  , IM_DEC  , IM_DBNZ , IM_INC  , IM_TST  , IM_MOV  , IM_CLR  , //0x70
+                                      IM_RTI  , IM_RTS  , IM_BGND , IM_SWI  , IM_TAP  , IM_TPA  , IM_PUL  , IM_PSH  , IM_PUL  , IM_PSH  , IM_PUL  , IM_PSH  , IM_CLR  , IM_NA   , IM_STOP , IM_WAIT , //0x80
+                                      IM_BGE  , IM_BLT  , IM_BGT  , IM_BLE  , IM_TXS  , IM_TSX  , IM_STHX , IM_TAX  , IM_CLC  , IM_SEC  , IM_CLI  , IM_SEI  , IM_RSP  , IM_NOP  , IM_PAGE2, IM_TXA  , //0x90
+                                      IM_SUB  , IM_CMP  , IM_SBC  , IM_CPX  , IM_AND  , IM_BIT  , IM_LDA  , IM_AIS  , IM_EOR  , IM_ADC  , IM_ORA  , IM_ADD  , IM_NA   , IM_BSR  , IM_LDX  , IM_AIX  , //0xA0
+                                      IM_SUB  , IM_CMP  , IM_SBC  , IM_CPX  , IM_AND  , IM_BIT  , IM_LDA  , IM_STA  , IM_EOR  , IM_ADC  , IM_ORA  , IM_ADD  , IM_JMP  , IM_JSR  , IM_LDX  , IM_STX  , //0xB0
+                                      IM_SUB  , IM_CMP  , IM_SBC  , IM_CPX  , IM_AND  , IM_BIT  , IM_LDA  , IM_STA  , IM_EOR  , IM_ADC  , IM_ORA  , IM_ADD  , IM_JMP  , IM_JSR  , IM_LDX  , IM_STX  , //0xC0
+                                      IM_SUB  , IM_CMP  , IM_SBC  , IM_CPX  , IM_AND  , IM_BIT  , IM_LDA  , IM_STA  , IM_EOR  , IM_ADC  , IM_ORA  , IM_ADD  , IM_JMP  , IM_JSR  , IM_LDX  , IM_STX  , //0xD0
+                                      IM_SUB  , IM_CMP  , IM_SBC  , IM_CPX  , IM_AND  , IM_BIT  , IM_LDA  , IM_STA  , IM_EOR  , IM_ADC  , IM_ORA  , IM_ADD  , IM_JMP  , IM_JSR  , IM_LDX  , IM_STX  , //0xE0
+                                      IM_SUB  , IM_CMP  , IM_SBC  , IM_CPX  , IM_AND  , IM_BIT  , IM_LDA  , IM_STA  , IM_EOR  , IM_ADC  , IM_ORA  , IM_ADD  , IM_JMP  , IM_JSR  , IM_LDX  , IM_STX  };//0xF0
+
+   unsigned char tempInstExtMnemonic[256] = {  IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , //0x00
+                                      IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , //0x10
+                                      IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , //0x20
+                                      IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , //0x30
+                                      IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , //0x40
+                                      IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , //0x50
+                                      IM_NEG  , IM_CBEQ , IM_NA   , IM_COM  , IM_LSR  , IM_NA   , IM_ROR  , IM_ASR  , IM_LSL  , IM_ROL  , IM_DEC  , IM_DBNZ , IM_INC  , IM_TST  , IM_NA   , IM_CLR  , //0x60
+                                      IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , //0x70
+                                      IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , //0x80
+                                      IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , //0x90
+                                      IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_LDHX , IM_NA   , //0xA0
+                                      IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_LDHX , IM_NA   , //0xB0
+                                      IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_LDHX , IM_NA   , //0xC0
+                                      IM_SUB  , IM_CMP  , IM_SBC  , IM_CPX  , IM_AND  , IM_BIT  , IM_LDA  , IM_STA  , IM_EOR  , IM_ADC  , IM_ORA  , IM_ADD  , IM_NA   , IM_NA   , IM_LDX  , IM_STX  , //0xD0
+                                      IM_SUB  , IM_CMP  , IM_SBC  , IM_CPX  , IM_AND  , IM_BIT  , IM_LDA  , IM_STA  , IM_EOR  , IM_ADC  , IM_ORA  , IM_ADD  , IM_NA   , IM_NA   , IM_LDX  , IM_STX  , //0xE0
+                                      IM_NA   , IM_NA   , IM_NA   , IM_CPHX , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_NA   , IM_LDHX , IM_STHX  };//0xF0
+
+
+   const char *tempInstMnemonicStr[256] = {  "BRSET0", "BRCLR0", "BRSET1", "BRCLR1", "BRSET2", "BRCLR2", "BRSET3", "BRCLR3", "BRSET4", "BRCLR4", "BRSET5", "BRCLR5", "BRSET6", "BRCLR6", "BRSET7", "BRCLR7", //0x00
+                                             "BSET0" , "BCLR0" , "BSET1" , "BCLR1" , "BSET2" , "BCLR2" , "BSET3" , "BCLR3" , "BSET4" , "BCLR4" , "BSET5" , "BCLR5" , "BSET6" , "BCLR6" , "BSET7" , "BCLR7" , //0x10
+                                             "BRA"   , "BRN"   , "BHI"   , "BLS"   , "BCC"   , "BCS"   , "BNE"   , "BEQ"   , "BHCC"  , "BHCS"  , "BPL"   , "BMI"   , "BMC"   , "BMS"   , "BIL"   , "BIH"   , //0x20
+                                             "NEG"   , "CBEQ"  , "LDHX"  , "COM"   , "LSR"   , "STHX"  , "ROR"   , "ASR"   , "LSL"   , "ROL"   , "DEC"   , "DBNZ"  , "INC"   , "TST"   , "CPHX"  , "CLR"   , //0x30
+                                             "NEGA"  , "CBEQA" , "MUL"   , "COMA"  , "LSRA"  , "LDHX"  , "RORA"  , "ASRA"  , "LSLA"  , "ROLA"  , "DECA"  , "DBNZA" , "INCA"  , "TSTA"  , "MOV"   , "CLRA"  , //0x40
+                                             "NEGX"  , "CBEQX" , "DIV"   , "COMX"  , "LSRX"  , "LDHX"  , "RORX"  , "ASRX"  , "LSLX"  , "ROLX"  , "DECX"  , "DBNZX" , "INCX"  , "TSTX"  , "MOV"   , "CLRX"  , //0x50
+                                             "NEG"   , "CBEQ"  , "NSA"   , "COM"   , "LSR"   , "CPHX"  , "ROR"   , "ASR"   , "LSL"   , "ROL"   , "DEC"   , "DBNZ"  , "INC"   , "TST"   , "MOV"   , "CLR"   , //0x60
+                                             "NEG"   , "CBEQ"  , "DAA"   , "COM"   , "LSR"   , "CPHX"  , "ROR"   , "ASR"   , "LSL"   , "ROL"   , "DEC"   , "DBNZ"  , "INC"   , "TST"   , "MOV"   , "CLR"   , //0x70
+                                             "RTI"   , "RTS"   , "BGND"  , "SWI"   , "TAP"   , "TPA"   , "PULA"  , "PSHA"  , "PULX"  , "PSHX"  , "PULH"  , "PSHH"  , "CLRH"  , "NA"    , "STOP"  , "WAIT"  , //0x80
+                                             "BGE"   , "BLT"   , "BGT"   , "BLE"   , "TXS"   , "TSX"   , "STHX"  , "TAX"   , "CLC"   , "SEC"   , "CLI"   , "SEI"   , "RSP"   , "NOP"   , "PAGE2" , "TXA"   , //0x90
+                                             "SUB"   , "CMP"   , "SBC"   , "CPX"   , "AND"   , "BIT"   , "LDA"   , "AIS"   , "EOR"   , "ADC"   , "ORA"   , "ADD"   , "NA"    , "BSR"   , "LDX"   , "AIX"   , //0xA0
+                                             "SUB"   , "CMP"   , "SBC"   , "CPX"   , "AND"   , "BIT"   , "LDA"   , "STA"   , "EOR"   , "ADC"   , "ORA"   , "ADD"   , "JMP"   , "JSR"   , "LDX"   , "STX"   , //0xB0
+                                             "SUB"   , "CMP"   , "SBC"   , "CPX"   , "AND"   , "BIT"   , "LDA"   , "STA"   , "EOR"   , "ADC"   , "ORA"   , "ADD"   , "JMP"   , "JSR"   , "LDX"   , "STX"   , //0xC0
+                                             "SUB"   , "CMP"   , "SBC"   , "CPX"   , "AND"   , "BIT"   , "LDA"   , "STA"   , "EOR"   , "ADC"   , "ORA"   , "ADD"   , "JMP"   , "JSR"   , "LDX"   , "STX"   , //0xD0
+                                             "SUB"   , "CMP"   , "SBC"   , "CPX"   , "AND"   , "BIT"   , "LDA"   , "STA"   , "EOR"   , "ADC"   , "ORA"   , "ADD"   , "JMP"   , "JSR"   , "LDX"   , "STX"   , //0xE0
+                                             "SUB"   , "CMP"   , "SBC"   , "CPX"   , "AND"   , "BIT"   , "LDA"   , "STA"   , "EOR"   , "ADC"   , "ORA"   , "ADD"   , "JMP"   , "JSR"   , "LDX"   , "STX"   };//0xF0
+
+   const char *tempInstExtMnemonicStr[256] = {"NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , //0x00
+                                             "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , //0x10
+                                             "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , //0x20
+                                             "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , //0x30
+                                             "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , //0x40
+                                             "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , //0x50
+                                             "NEG"   , "CBEQ"  , "NA"    , "COM"   , "LSR"   , "NA"    , "ROR"   , "ASR"   , "LSL"   , "ROL"   , "DEC"   , "DBNZ"  , "INC"   , "TST"   , "NA"    , "CLR"   , //0x60
+                                             "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , //0x70
+                                             "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , //0x80
+                                             "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , //0x90
+                                             "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "LDHX"  , "NA"    , //0xA0
+                                             "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "LDHX"  , "NA"    , //0xB0
+                                             "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "LDHX"  , "NA"    , //0xC0
+                                             "SUB"   , "CMP "  , "SBC"   , "CPX"   , "AND"   , "BIT"   , "LDA"   , "STA"   , "EOR"   , "ADC"   , "ORA"   , "ADD"   , "NA"    , "NA"    , "LDX"   , "STX"   , //0xD0
+                                             "SUB"   , "CMP "  , "SBC"   , "CPX"   , "AND"   , "BIT"   , "LDA"   , "STA"   , "EOR"   , "ADC"   , "ORA"   , "ADD"   , "NA"    , "NA"    , "LDX"   , "STX"   , //0xE0
+                                             "NA"    , "NA"    , "NA"    , "CPHX"  , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "NA"    , "LDHX"  , "STHX"  };//0xF0
+
+                                             //Disassemble
+   char tempDisassembleFunction[256] = {      DF_DIRREL, DF_DIRREL, DF_DIRREL, DF_DIRREL, DF_DIRREL, DF_DIRREL, DF_DIRREL, DF_DIRREL, DF_DIRREL, DF_DIRREL, DF_DIRREL, DF_DIRREL, DF_DIRREL, DF_DIRREL, DF_DIRREL, DF_DIRREL, //0x00
+                                              DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR ,DF_DIR, //0x10
+                                              DF_REL, DF_REL, DF_REL, DF_REL, DF_REL, DF_REL, DF_REL, DF_REL, DF_REL, DF_REL, DF_REL, DF_REL, DF_REL, DF_REL, DF_REL ,DF_REL, //0x20
+                                              DF_DIR, DF_DIRREL, DF_EXT, DF_DIR, DF_DIR, DF_DIR  , DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIRREL, DF_DIR, DF_DIR, DF_EXT ,DF_DIR, //0x30
+                                              DF_INH, DF_IMMREL, DF_INH, DF_INH, DF_INH, DF_IMM16, DF_INH, DF_INH, DF_INH, DF_INH, DF_INH, DF_INHREL, DF_INH, DF_INH, DF_DIRDIR ,DF_INH, //0x40
+                                              DF_INH, DF_IMMREL, DF_INH, DF_INH, DF_INH, DF_DIR  , DF_INH, DF_INH, DF_INH, DF_INH, DF_INH, DF_INHREL, DF_INH, DF_INH, DF_DIRIXP ,DF_INH, //0x50
+                                              DF_IX1, DF_I1PREL, DF_INH, DF_IX1, DF_IX1, DF_IMM16, DF_IX1, DF_IX1, DF_IX1, DF_IX1, DF_IX1, DF_IX1REL, DF_IX1, DF_IX1, DF_IMMDIR ,DF_IX1, //0x60
+                                              DF_IX0, DF_IXPREL, DF_INH, DF_IX0, DF_IX0, DF_DIR  , DF_IX0, DF_IX0, DF_IX0, DF_IX0, DF_IX0, DF_IX0REL, DF_IX0, DF_IX0, DF_IXPDIR ,DF_IX0, //0x70
+                                              DF_INH, DF_INH, DF_INH, DF_INH, DF_INH, DF_INH, DF_INH, DF_INH, DF_INH, DF_INH, DF_INH, DF_INH, DF_INH, DF_NA , DF_INH ,DF_INH, //0x80
+                                              DF_REL, DF_REL, DF_REL, DF_REL, DF_INH, DF_INH, DF_EXT, DF_INH, DF_INH, DF_INH, DF_INH, DF_INH, DF_INH, DF_INH, DF_NA  ,DF_INH, //0x90
+                                              DF_IMM8, DF_IMM8, DF_IMM8, DF_IMM8, DF_IMM8, DF_IMM8, DF_IMM8, DF_IMM8, DF_IMM8, DF_IMM8, DF_IMM8, DF_IMM8, DF_NA , DF_REL, DF_IMM8 ,DF_IMM8, //0xA0
+                                              DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR, DF_DIR ,DF_DIR, //0xB0
+                                              DF_EXT, DF_EXT, DF_EXT, DF_EXT, DF_EXT, DF_EXT, DF_EXT, DF_EXT, DF_EXT, DF_EXT, DF_EXT, DF_EXT, DF_EXT, DF_EXT, DF_EXT ,DF_EXT, //0xC0
+                                              DF_IX2, DF_IX2, DF_IX2, DF_IX2, DF_IX2, DF_IX2, DF_IX2, DF_IX2, DF_IX2, DF_IX2, DF_IX2, DF_IX2, DF_IX2, DF_IX2, DF_IX2 ,DF_IX2, //0xD0
+                                              DF_IX1, DF_IX1, DF_IX1, DF_IX1, DF_IX1, DF_IX1, DF_IX1, DF_IX1, DF_IX1, DF_IX1, DF_IX1, DF_IX1, DF_IX1, DF_IX1, DF_IX1 ,DF_IX1, //0xE0
+                                              DF_IX0, DF_IX0, DF_IX0, DF_IX0, DF_IX0, DF_IX0, DF_IX0, DF_IX0, DF_IX0, DF_IX0, DF_IX0, DF_IX0, DF_IX0, DF_IX0, DF_IX0 ,DF_IX0};//0xF0
+   char tempExtDisassembleFunction[256] = {   DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , //0x00
+                                              DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , //0x10
+                                              DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , //0x20
+                                              DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , //0x30
+                                              DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , //0x40
+                                              DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , //0x50
+                                              DF_SP1, DF_SP1REL, DF_NA , DF_SP1, DF_SP1, DF_NA , DF_SP1, DF_SP1, DF_SP1, DF_SP1, DF_SP1, DF_SP1REL, DF_SP1, DF_SP1, DF_NA , DF_SP1, //0x60
+                                              DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , //0x70
+                                              DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , //0x80
+                                              DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , //0x90
+                                              DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_IX0, DF_NA , //0xA0
+                                              DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_IX2, DF_NA , //0xB0
+                                              DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_IX1, DF_NA , //0xC0
+                                              DF_SP2, DF_SP2, DF_SP2, DF_SP2, DF_SP2, DF_SP2, DF_SP2, DF_SP2, DF_SP2, DF_SP2, DF_SP2, DF_SP2, DF_NA , DF_NA , DF_SP2, DF_SP2, //0xD0
+                                              DF_SP1, DF_SP1, DF_SP1, DF_SP1, DF_SP1, DF_SP1, DF_SP1, DF_SP1, DF_SP1, DF_SP1, DF_SP1, DF_SP1, DF_NA , DF_NA , DF_SP1, DF_SP1, //0xE0
+                                              DF_NA , DF_NA , DF_NA , DF_SP1, DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_NA , DF_SP1, DF_SP1 };//0xF0
+
+
+   unsigned char tempMnemonicFlagsMethod[86] = {
+                                    MFM_NA,           // IM_NA        0  // Invalid opcode
+                                    MFM_NONE,         // IM_BRSET     1  //
+                                    MFM_NONE,         // IM_BRCLR     2  //
+                                    MFM_NONE,         // IM_BSET      3  //
+                                    MFM_NONE,         // IM_BCLR      4  //
+                                    MFM_NONE,         // IM_BRA       5  //
+                                    MFM_NONE,         // IM_BRN       6  //
+                                    MFM_NONE,         // IM_BHI       7  //
+                                    MFM_NONE,         // IM_BLS       8  //
+                                    MFM_NONE,         // IM_BCC       9  //
+                                    MFM_NONE,         // IM_BCS      10  //
+                                    MFM_NONE,         // IM_BNE      11  //
+                                    MFM_NONE,         // IM_BEQ      12  //
+                                    MFM_NONE,         // IM_BHCC     13  //
+                                    MFM_NONE,         // IM_BHCS     14  //
+                                    MFM_NONE,         // IM_BPL      15  //
+                                    MFM_NONE,         // IM_BMI      16  //
+                                    MFM_NONE,         // IM_BMC      17  //
+                                    MFM_NONE,         // IM_BMS      18  //
+                                    MFM_NA,           // IM_BIL      19  //
+                                    MFM_NA,           // IM_BIH      20  //
+                                    MFM_NONE,         // IM_NEG      21  //
+                                    MFM_NONE,         // IM_CBEQ     22  //
+                                    MFM_VNZ_16B,      // IM_LDHX     23  //
+                                    MFM_VNZ_8B,       // IM_COM      24  //
+                                    MFM_NZ_8B,        // IM_LSR      25  //
+                                    MFM_VNZ_16B,      // IM_STHX     26  //
+                                    MFM_NZ_8B,        // IM_ROR      27  //
+                                    MFM_NZ_8B,        // IM_ASR      28  //
+                                    MFM_NZ_8B,        // IM_LSL      29  //
+                                    MFM_NZ_8B,        // IM_ROL      30  //
+                                    MFM_VNZ_DEC_8B,   // IM_DEC      31  //
+                                    MFM_NONE,         // IM_DBNZ     32  //
+                                    MFM_VNZ_INC_8B,   // IM_INC      33  //
+                                    MFM_VNZ_8B,       // IM_TST      34  //
+                                    MFM_VNZC_CPHX_16B,// IM_CPHX     35  //
+                                    MFM_VNZ_8B,       // IM_MOV      36  //
+                                    MFM_NONE,         // IM_CLR      37  //
+                                    MFM_NONE,         // IM_MUL      38  //
+                                    MFM_NONE,         // IM_DIV      39  //
+                                    MFM_NONE,         // IM_NSA      40  //
+                                    MFM_VNZ_8B,       // IM_DAA      41  //
+                                    MFM_NONE,         // IM_RTI      42  //
+                                    MFM_NONE,         // IM_RTS      43  //
+                                    MFM_NA,           // IM_BGND     44  //
+                                    MFM_NONE,         // IM_SWI      45  //
+                                    MFM_NONE,         // IM_TAP      46  //
+                                    MFM_NONE,         // IM_TPA      47  //
+                                    MFM_NONE,         // IM_PUL      48  //
+                                    MFM_NONE,         // IM_PSH      49  //
+                                    MFM_NA,           // IM_STOP     50  //
+                                    MFM_NA,           // IM_WAIT     51  //
+                                    MFM_NONE,         // IM_BGE      52  //
+                                    MFM_NONE,         // IM_BLT      53  //
+                                    MFM_NONE,         // IM_BGT      54  //
+                                    MFM_NONE,         // IM_BLE      55  //
+                                    MFM_NONE,         // IM_TXS      56  //
+                                    MFM_NONE,         // IM_TSX      57  //
+                                    MFM_NONE,         // IM_TAX      58  //
+                                    MFM_NONE,         // IM_CLC      59  //
+                                    MFM_NONE,         // IM_SEC      60  //
+                                    MFM_NONE,         // IM_CLI      61  //
+                                    MFM_NONE,         // IM_SEI      62  //
+                                    MFM_NONE,         // IM_RSP      63  //
+                                    MFM_NONE,         // IM_NOP      64  //
+                                    MFM_NA,           // IM_PAGE2    65  //
+                                    MFM_NONE,         // IM_TXA      66  //
+                                    MFM_VNZC_SUB_8B,  // IM_SUB      67  //
+                                    MFM_VNZC_SUB_8B,  // IM_CMP      68  //
+                                    MFM_VNZC_SUB_8B,  // IM_SBC      69  //
+                                    MFM_VNZC_SUB_8B,  // IM_CPX      70  //
+                                    MFM_VNZ_8B,       // IM_AND      71  //
+                                    MFM_VNZ_8B,       // IM_BIT      72  //
+                                    MFM_VNZ_8B,       // IM_LDA  73  //
+                                    MFM_NONE,         // IM_AIS      74  //
+                                    MFM_VNZ_8B,       // IM_STA      75  //
+                                    MFM_VNZ_8B,       // IM_EOR      76  //
+                                    MFM_VHNZC_ADD_8B, // IM_ADC      77  //
+                                    MFM_VNZ_8B,       // IM_ORA      78  //
+                                    MFM_VHNZC_ADD_8B, // IM_ADD      79  //
+                                    MFM_NONE,         // IM_JMP      80  //
+                                    MFM_NONE,         // IM_BSR      81  //
+                                    MFM_NONE,         // IM_JSR      82  //
+                                    MFM_VNZ_8B,       // IM_LDX      83  //
+                                    MFM_VNZ_8B,       // IM_STX     84  //
+                                    MFM_NONE };       // IM_AIX      85 //
+
+
+   CPURegisters = new hcs08CPURegisters();
+
+   for(int i=0; i < 256; i++)
+   {
+      instructions[i]    = new hcs08Instruction(i,memory, tempInstNoOfBytes[i]   , 0, tempInstAddressingMode1st[i]   ,CPURegisters,tempInstMnemonic[i]    ,tempMnemonicFlagsMethod[tempInstMnemonic[i]]    ,tempInstMnemonicStr[i]    ,tempDisassembleFunction[i]    );
+      instructionsExt[i] = new hcs08Instruction(i,memory, tempInstExtNoOfBytes[i], 1, tempInstExtAddressingMode1st[i],CPURegisters,tempInstExtMnemonic[i] ,tempMnemonicFlagsMethod[tempInstExtMnemonic[i]] ,tempInstExtMnemonicStr[i] ,tempExtDisassembleFunction[i] );
+   }
+
 
    // ------------------------------------------------------------
    //  Remove - Only for debugging purpose
@@ -146,24 +321,21 @@ simMC9S08AC60::simMC9S08AC60(unsigned char *p_memory)
    //  END - Remove - Only for debugging purpose
    // ------------------------------------------------------------
 
-
-
-   A = 0; // ACCUMULATOR
-   H = 0; // INDEX REGISTER (HIGH)
-   X = 0; // INDEX REGISTER (LOW)
-   SP = 0; // STACK POINTER
-   PC = 0; // PROGRAM COUNTER
+   CPURegisters->A = 0; // ACCUMULATOR
+   CPURegisters->H = 0; // INDEX REGISTER (HIGH)
+   CPURegisters->X = 0; // INDEX REGISTER (LOW)
+   CPURegisters->SP = 0; // STACK POINTER
+   CPURegisters->PC = 0; // PROGRAM COUNTER
 
    // CONDITION CODE REGISTER
-   STATUS_C = 0; // bit 0 - CARRY
-   STATUS_Z = 0; // bit 1 - CCR_ZERO
-   STATUS_N = 0; // bit 2 - CCR_NEGATIVE
-   STATUS_I = 0; // bit 3 - CCR_INTERRUPT_MASK
-   STATUS_H = 0; // bit 4 - CCR_HALF_CARRY
-   STATUS_V = 0; // bit 7 - CCR_TWO_S_COMPLEMENT_OVERFLOW
-
+   CPURegisters->STATUS_C = 0; // bit 0 - CARRY
+   CPURegisters->STATUS_Z = 0; // bit 1 - CCR_ZERO
+   CPURegisters->STATUS_N = 0; // bit 2 - CCR_NEGATIVE
+   CPURegisters->STATUS_I = 0; // bit 3 - CCR_INTERRUPT_MASK
+   CPURegisters->STATUS_H = 0; // bit 4 - CCR_HALF_CARRY
+   CPURegisters->STATUS_V = 0; // bit 7 - CCR_TWO_S_COMPLEMENT_OVERFLOW
    // Fetch reset vector
-   PC = memory[0xFFFE] * 0x100 + memory[0xFFFF];
+   CPURegisters->PC = memory[0xFFFE] * 0x100 + memory[0xFFFF];
 
    //Debug
    //PC = 0xF62A; // PROGRAM COUNTER
@@ -171,1646 +343,56 @@ simMC9S08AC60::simMC9S08AC60(unsigned char *p_memory)
 
 }
 
-
-void simMC9S08AC60::setAddressingModeText(unsigned short memory_index)
+hcs08_ProgramInstruction* simMC9S08AC60::singleStepNew()
 {
-   unsigned char opcode = memory[memory_index];
-   char temp_addressingModeText[20];
-   //Is opcode extended ?
-   if(opcode != 0x9E)
-   {
-      //Page 1 char addressingMode, unsigned char *buffer)
-      if(instructions[opcode]->addressingMode2nd == AM_NA)
-      {
-         getAddressingModeAsText(instructions[opcode]->addressingMode1st,temp_addressingModeText);
-         sprintf(addressingModeText,"%s",temp_addressingModeText);
-      }
-      else
-      {
-         char temp_addressingModeText2nd[20];
-         getAddressingModeAsText(instructions[opcode]->addressingMode1st,temp_addressingModeText);
-         getAddressingModeAsText(instructions[opcode]->addressingMode2nd,temp_addressingModeText2nd);
-         sprintf(addressingModeText,"%s/%s ",temp_addressingModeText,temp_addressingModeText2nd);
-      }
+   unsigned char opCode = memory[CPURegisters->PC];
 
+   //printf("opCode: %X\n",opCode);
+
+   hcs08Instruction *inst;
+   if(opCode != 0x9E)
+   {
+      inst = instructions[opCode];
    }
    else
    {
-      //Page two (extended opcodes)
-      opcode = memory[memory_index+1];
-      getAddressingModeAsText(instructionsExt[opcode]->addressingMode1st,temp_addressingModeText);
-      sprintf(addressingModeText,"%s",temp_addressingModeText);
+      opCode = memory[CPURegisters->PC + 1];
+      inst = instructionsExt[opCode];
    }
 
-}
+   char strBytecodeText[20] = { 0 };
+   char strDisassembleText[60] = { 0 };
+   char strAddressingModeText[20] = { 0 };
+   char strCCRAsText[40] = { 0 };
+   char strRegistersAsText[60] = { 0 };
 
+   unsigned short ProgramCounter = CPURegisters->PC;
 
-void simMC9S08AC60::step()
-{
-   unsigned char H_temp;
-   unsigned char X_temp;
-   unsigned char IMM_temp;
-   unsigned char ADDR_temp;
-   unsigned char PCL_temp,PCH_temp;
-   unsigned char RESULT_temp;
-   unsigned short INDEX_temp;
-   unsigned short MEM_temp;
-   unsigned short RESULT_S_temp;
-   unsigned char oprx8_temp;
-   //unsigned char opr8i_temp;
-   unsigned short opr16a;
-   unsigned short oprx16a;
-   unsigned char m_temp;
-   unsigned char r_temp;
-   unsigned char rel_temp;
-   unsigned char opr8a_temp;
-   unsigned char bitNo;
-   unsigned char A7,M7,R7,A3,M3,R3;
+   ProgramCounterPrevious = ProgramCounter;
 
-   instructionCounter++;
+   inst->getBytecodeText(strBytecodeText);
+   inst->DisassembleText(strDisassembleText);
+   inst->getAddressingModeAsText(strAddressingModeText);
 
-   sprintf(programCounterText,"%04X",PC);
+   inst->Execute();
 
+   CPURegisters->getCCRAsText(strCCRAsText);
+   CPURegisters->getRegistersAsText(strRegistersAsText);
 
-   //write adressing mode text
-   setAddressingModeText(PC);
+   char str[100];
+   char str2[150];
+   sprintf(str,"%04X  %-12s  %s",ProgramCounter,strBytecodeText,strDisassembleText);
+   sprintf(str2,"%-38s %-10s %s / %s",str,strAddressingModeText,strCCRAsText,strRegistersAsText);
 
-   //Set instruction length
-   if(memory[PC] != 0x9E)
-      instructionLength = instructions[memory[PC]]->noOfBytes;
-   else
-      instructionLength = instructionsExt[memory[PC+1]]->noOfBytes;
+   //printf("%s\n",str2);
 
-   //Write bytecode text
-   if(memory[PC] != 0x9E)
-      setBytecodeText(instructions[memory[PC]]->noOfBytes, memory + PC);
-   else
-      setBytecodeText(instructionsExt[memory[PC+1]]->noOfBytes, memory + PC);
-
-   PC_previous = PC;
-
-   //opcode
-   switch(memory[PC])
-   {
-      case 0x01: case 0x03: case 0x05: case 0x07:
-      case 0x09: case 0x0B: case 0x0D: case 0x0F: // BRCLR(bit n),opr8a,rel DIR (b<bit n>) - Branch if Bit n in Memory Clear
-         bitNo = memory[PC++];
-         bitNo = (bitNo - 0x1) / 2;
-         m_temp = memory[PC++];
-         rel_temp = memory[PC++];
-
-         sprintf(disassembleText,"BRCLR%01X %02X %02d",bitNo,m_temp,(char)rel_temp);
-
-         if(memory[m_temp] & (0x01 << bitNo)) { //Mask bit n
-            STATUS_C = 1;
-         }
-         else {
-            PC += (char)rel_temp;
-            STATUS_C = 0;
-         }
-         break;
-
-      case 0x00: case 0x02: case 0x04: case 0x06:
-      case 0x08: case 0x0A: case 0x0C: case 0x0E: // BRSET(bit n),opr8a,rel DIR (b<bit n>) - Branch if Bit n in Memory Set
-         bitNo = memory[PC++];
-         bitNo = (bitNo - 0x00) / 2;
-         m_temp = memory[PC++];
-         rel_temp = memory[PC++];
-
-         sprintf(disassembleText,"BRSET%01X %02X %02d",bitNo,m_temp,(char)rel_temp);
-
-         if(memory[m_temp] & (0x01 << bitNo)) { //Mask bit n
-            PC += (char)rel_temp;
-            STATUS_C = 1;
-         }
-         else {
-            STATUS_C = 0;
-         }
-         break;
-
-      case 0x10: case 0x12: case 0x14: case 0x16:
-      case 0x18: case 0x1A: case 0x1C: case 0x1E: // BSET (bit n),opr8a DIR (b<bit n>) - Set Bit n in Memory
-         bitNo = memory[PC++];
-         bitNo = (bitNo - 0x10) / 2;
-         m_temp = memory[PC++];
-         memory[m_temp] |= (0x01 << bitNo);
-         sprintf(disassembleText,"BSET%01X %02X",bitNo,m_temp);
-         break;
-
-      case 0x11: case 0x13: case 0x15: case 0x17:
-      case 0x19: case 0x1B: case 0x1D: case 0x1F: // BCLR (bit n),opr8a DIR (b<bit n>) - Clear Bit n in Memory
-         bitNo = memory[PC++];
-         bitNo = (bitNo - 0x11) / 2;
-         m_temp = memory[PC++];
-         memory[m_temp] &= ~((unsigned char)(0x01 << bitNo));
-         sprintf(disassembleText,"BCLR%01X %02X",bitNo,m_temp);
-         break;
-
-      case 0x20: // BRA rel (REL)- Branch Always
-         PC++;
-         rel_temp = memory[PC++];
-         PC = PC + (char)rel_temp;
-         sprintf(disassembleText,"BRA %04X",PC);
-         break;
-
-      case 0x22: // BHI rel (REL)- Branch if Higher
-         PC++;
-         rel_temp = memory[PC++];
-         sprintf(disassembleText,"BHI %04X",PC + (char)rel_temp);
-         if( (STATUS_C | STATUS_Z) == 0)
-            PC += (char)rel_temp;
-         break;
-
-      case 0x23: // BLS rel (REL)- Branch if Lower or Same
-         PC++;
-         rel_temp = memory[PC++];
-         sprintf(disassembleText,"BLS %04X",PC + (char)rel_temp);
-         if( (STATUS_C | STATUS_Z) == 1)
-            PC += (char)rel_temp;
-         break;
-
-      case 0x24: // BCC rel (REL) - Branch if Carry Bit Clear
-         PC++;
-         rel_temp = memory[PC++];
-         sprintf(disassembleText,"BCC #%d",(char)rel_temp);
-         if(STATUS_C == 0)
-            PC = PC + (char)rel_temp;
-         break;
-
-
-      case 0x25: // BCS rel (REL) - Branch if Carry Bit Set
-         sprintf(disassembleText,"BCS #%d",(char)memory[PC+1]);
-         if(STATUS_C)
-            PC = PC + 2 + (char)memory[PC+1];
-         else
-            PC += 2;
-         break;
-
-      case 0x26: // BNE rel (REL) - Branch if Not Equal
-         PC++;
-         ADDR_temp = memory[PC++];
-         sprintf(disassembleText,"BNE %d",(char)ADDR_temp);
-         if(STATUS_Z == 0) {
-               PC = PC + (char)ADDR_temp;
-         }
-         break;
-
-      case 0x27: // BEQ rel (REL) - Branch if Equal
-         PC++;
-         ADDR_temp = memory[PC++];
-         sprintf(disassembleText,"BEQ %d",(char)ADDR_temp);
-         if(STATUS_Z == 1) {
-               PC = PC + (char)ADDR_temp;
-         }
-         break;
-
-      case 0x2A: // BPL rel (REL) - Branch if Plus
-         PC++;
-         ADDR_temp = memory[PC++];
-         sprintf(disassembleText,"BPL %d",(char)ADDR_temp);
-         if(STATUS_N == 0) {
-               PC = PC + (char)ADDR_temp;
-         }
-         break;
-
-      case 0x32: // LDHX opr16a (EXT) - Load Index Register from Memory
-         PC++;
-         PCH_temp = memory[PC++];
-         PCL_temp = memory[PC++];
-         H = memory[PCH_temp * 0x100 + PCL_temp];
-         X = memory[PCH_temp * 0x100 + PCL_temp + 1];
-         sprintf(disassembleText,"LDHX %04X",PCH_temp * 0x100 + PCL_temp);
-         STATUS_V = 0;
-         STATUS_N = (H >> 7) & 0x01;
-         if(H==0 && X==0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-         break;
-
-      case 0x35: // STHX opr8a (DIR) - Store Index Register
-         PC++;
-         opr8a_temp = memory[PC++];
-         memory[opr8a_temp] = H;
-         memory[opr8a_temp + 1] = X;
-         sprintf(disassembleText,"STHX %02X",opr8a_temp);
-         STATUS_V = 0;
-         STATUS_N = (H >> 7) & 0x01;
-         if(H==0 && X==0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0x38: // LSL opr8a (DIR) - Logical Shift Left
-         PC++;
-         opr8a_temp = memory[PC++];
-         m_temp = memory[opr8a_temp];
-         sprintf(disassembleText,"LSL %02X",opr8a_temp);
-         STATUS_C = (m_temp >> 7) & 0x01;
-         RESULT_temp = m_temp << 1;
-         STATUS_N = (RESULT_temp >> 7) & 0x01;
-         STATUS_V = STATUS_N ^ STATUS_C;
-         if(RESULT_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         memory[opr8a_temp] = RESULT_temp;
-         break;
-
-      case 0x39: // ROL opr8a (DIR) - Rotate Left through Carry
-         PC++;
-         opr8a_temp = memory[PC++];
-         m_temp = memory[opr8a_temp];
-         sprintf(disassembleText,"ROL %02X",opr8a_temp);
-         RESULT_temp = (m_temp << 1) + STATUS_C;
-         STATUS_C = (m_temp >> 7) & 0x01;
-         STATUS_N = (RESULT_temp >> 7) & 0x01;
-         STATUS_V = STATUS_N ^ STATUS_C;
-         if(RESULT_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         memory[opr8a_temp] = RESULT_temp;
-         break;
-
-      case 0x3C: // INC opr8a (DIR) - Increment
-         PC++;
-         opr8a_temp = memory[PC++];
-         RESULT_S_temp = memory[opr8a_temp];
-         memory[opr8a_temp] = ++RESULT_S_temp & 0x00FF;
-         sprintf(disassembleText,"INC %02X",opr8a_temp);
-         if(RESULT_S_temp == 0x80) STATUS_V = 1;else STATUS_V = 0;
-         STATUS_N = (RESULT_S_temp >> 7) & 0x01;
-         if(RESULT_S_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0x3E: // CPHX opr16a (EXT) - Compare Index Register with Memory
-         PC++;
-         opr16a  = memory[PC++] * 0x100;
-         opr16a += memory[PC++];
-         sprintf(disassembleText,"CPHX %04X",opr16a);
-         MEM_temp = memory[opr16a] * 100 + memory[opr16a + 1];
-         INDEX_temp = H * 0x100 + X;
-         RESULT_S_temp = INDEX_temp - MEM_temp;
-         //V flag - 2's complement overflow
-         STATUS_V = ( (H>>7) && !(MEM_temp>>15) && !(RESULT_S_temp>>15)) ||
-                    (!(H>>7) &&  (MEM_temp>>15) &&  (RESULT_S_temp>>15));  // H7 & /M15 & /R15 | /H7 & M15 & R15
-         STATUS_N = (RESULT_S_temp>>15);
-         if(RESULT_S_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         if(MEM_temp > INDEX_temp) STATUS_C = 1; else STATUS_C = 0;
-         break;
-
-      case 0x3F: // CLR opr8a (DIR) - Clear
-         PC++;
-         opr8a_temp = memory[PC++];
-         memory[opr8a_temp] = 0;
-         sprintf(disassembleText,"CLR %02X",opr8a_temp);
-         STATUS_V = 0;
-         STATUS_N = 0;
-         STATUS_Z = 1;
-         break;
-
-      case 0x41: // CBEQA #opr8i,rel  CBEQX #opr8i,rel IMM - Compare and Branch if Equal
-         PC++;
-         IMM_temp = memory[PC++];
-         ADDR_temp = memory[PC++];
-         sprintf(disassembleText,"CBEQA %02X,%04X",IMM_temp,PC + (char)ADDR_temp);
-         if(IMM_temp == A) {
-               PC = PC + (char)ADDR_temp;
-         }
-         break;
-
-      case 0x42: // MUL (INH) - Unsigned Multiply
-         PC++;
-         RESULT_S_temp = X * A;
-         X = (RESULT_S_temp >> 8) & 0xFF;
-         A = RESULT_S_temp & 0xFF;
-         sprintf(disassembleText,"MUL");
-         STATUS_H = 0;
-         STATUS_C = 0;
-         break;
-
-      case 0x43: // COMA (INH) - Complement (One’s Complement)
-         PC++;
-         A = ~A;
-         sprintf(disassembleText,"COMA");
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         STATUS_C = 1;
-         break;
-
-      case 0x44: // LSRA (INH-A) - Logical Shift Right
-         PC++;
-         sprintf(disassembleText,"LSRA");
-         STATUS_V = A & 0x01;
-         STATUS_C = A & 0x01;
-         A = A >> 1;
-         STATUS_N = 0;
-         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0x45: // LDHX #opr16i (IMM)
-         PC +=1;
-         H = memory[PC++];
-         X = memory[PC++];
-         sprintf(disassembleText,"LDHX #%04X",H*0x100+X);
-         STATUS_V = 0;
-         STATUS_N = (H >> 7) & 0x01;
-         if(H==0 && X==0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-         break;
-
-      case 0x46: // RORA (INH) - Rotate Right through Carry
-         PC++;
-         sprintf(disassembleText,"RORA");
-         RESULT_temp = (STATUS_C << 7);
-         STATUS_C = A & 0x01;
-         RESULT_temp += (A >> 1) & 0x7F;
-         STATUS_N = (RESULT_temp >> 7) & 0x01;
-         STATUS_V = STATUS_N ^ STATUS_C;
-         if(RESULT_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         A = RESULT_temp;
-         break;
-
-      case 0x48: // LSLA (INH-A) - Logical Shift Left (Same as ASL)
-         PC++;
-         sprintf(disassembleText,"LSLA");
-         STATUS_C = (A >> 7) & 0x01;
-         A = A << 1;
-         STATUS_N = (A >> 7) & 0x01;
-         STATUS_V = STATUS_N ^ STATUS_C;
-         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0x4A: // DECA (INH) - Decrement
-         PC++;
-         A--;
-         if(A == 0x7F) STATUS_V = 1;else STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1;else STATUS_Z = 0;
-         sprintf(disassembleText,"DECA");
-         break;
-
-      case 0x4B: // DBNZA rel (INH) - Decrement and Branch if Not Zero
-         PC++;
-         ADDR_temp = memory[PC++];
-         sprintf(disassembleText,"DBNZA #%d",(char)ADDR_temp);
-         A--;
-         if(A != 0) {
-               PC = PC + (char)ADDR_temp;
-         }
-         break;
-
-      case 0x4C: // INCA (INH-A) - Increment
-         PC++;
-         sprintf(disassembleText,"INCA");
-         A++;
-         if(A == 0x80) STATUS_V = 1; else STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0x4D: // TSTA INH (A) - Test for Negative or Zero
-         PC++;
-         sprintf(disassembleText,"TSTA");
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-         break;
-
-      case 0x4F: // CLRA (INH-A) - Clear
-         PC +=1;
-         A = 0x00;
-         sprintf(disassembleText,"CLRA");
-         STATUS_V = 0;
-         STATUS_N = 0;
-         STATUS_Z = 1;
-         break;
-
-      case 0x51: // CBEQX #opr8i,rel IMM - Compare and Branch if Equal
-         PC++;
-         IMM_temp = memory[PC++];
-         ADDR_temp = memory[PC++];
-         sprintf(disassembleText,"CBEQX %02X,%d",IMM_temp,(char)ADDR_temp);
-         if(IMM_temp == X) {
-               PC = PC + (char)ADDR_temp;
-         }
-         break;
-
-      case 0x54: // LSRX (INH-A) - Logical Shift Right
-         PC++;
-         sprintf(disassembleText,"LSRX");
-         STATUS_V = X & 0x01;
-         STATUS_C = X & 0x01;
-         X = X >> 1;
-         STATUS_N = 0;
-         if(X == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0x55: // LDHX opr8a (DIR) - Load Index Register from Memory
-         PC++;
-         m_temp = memory[PC++];
-         H = memory[m_temp];
-         X = memory[m_temp + 1];
-         sprintf(disassembleText,"LDHX %02X",m_temp);
-         STATUS_V = 0;
-         STATUS_N = (H >> 7) & 0x01;
-         if(H == 0 && X == 0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-         break;
-
-      case 0x58: // LSLX (INH) - Logical Shift Left (Same as ASL)
-         PC++;
-         sprintf(disassembleText,"LSLX");
-         STATUS_C = (X >> 7) & 0x01;
-         X <<= 1;
-         STATUS_N = (X >> 7) & 0x01;
-         STATUS_V = STATUS_N ^ STATUS_C;
-         if(X == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0x5C: // INCX (INH-A) - Increment
-         PC++;
-         sprintf(disassembleText,"INCX");
-         X++;
-         if(X == 0x80) STATUS_V = 1; else STATUS_V = 0;
-         STATUS_N = (X >> 7) & 0x01;
-         if(X == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0x5D: // TSTX (INH-X) - Test for Negative or Zero
-         PC++;
-         sprintf(disassembleText,"TSTX");
-         STATUS_V = 0;
-         STATUS_N = (X >> 7) & 0x01;
-         if(X == 0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-         break;
-
-      case 0x5F: // CLRX (INH-A) - Clear
-         PC +=1;
-         X = 0x00;
-         sprintf(disassembleText,"CLRX");
-         STATUS_V = 0;
-         STATUS_N = 0;
-         STATUS_Z = 1;
-         break;
-
-      case 0x61: // CBEQ oprx8,X+,rel (IX1+) - Compare and Branch if Equal
-         PC++;
-         oprx8_temp = memory[PC++];
-         rel_temp = memory[PC++];
-         m_temp = memory[H * 0x100 + X + oprx8_temp];
-         sprintf(disassembleText,"CBEQ %02X,%04X,%04X",oprx8_temp,H * 0x100 + X,PC + (char)rel_temp);
-         if(m_temp == A) {
-               PC = PC + (char)rel_temp;
-         }
-         INDEX_temp = H * 0x100 + X;
-         INDEX_temp++;
-         H = (INDEX_temp >> 7) & 0x00FF;
-         X = INDEX_temp & 0x00FF;
-         break;
-
-      case 0x62: // CLRX (INH-A) - Clear
-         PC++;
-         m_temp = A & 0x0F;
-         A >>= 4;
-         A += (m_temp << 4);
-         sprintf(disassembleText,"NSA");
-         break;
-
-      case 0x63: // COM oprx8,X (IX1) - Complement (One’s Complement)
-         PC++;
-         oprx8_temp = memory[PC++];
-         m_temp = memory[H * 0x100 + X + oprx8_temp];
-         m_temp = ~m_temp;
-         memory[H * 0x100 + X + oprx8_temp] = m_temp;
-         sprintf(disassembleText,"COM %02X,%04X",oprx8_temp,H * 0x100 + X);
-         STATUS_V = 0;
-         STATUS_N = (m_temp >> 7) & 0x01;
-         if(m_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         STATUS_C = 1;
-         break;
-
-      case 0x65: // CPHX (IMM) - Compare Index Register with Memory
-         INDEX_temp = H * 0x100 + X;
-         MEM_temp = memory[PC+1]*0x100 + memory[PC+2];
-         PC+=3;
-         RESULT_S_temp = (short)INDEX_temp - (short)MEM_temp;
-         sprintf(disassembleText,"CPHX #%04X",MEM_temp);
-         //V flag - 2's complement overflow
-         STATUS_V = ( (H>>7) && !(MEM_temp>>15) && !(RESULT_S_temp>>15)) ||
-                    (!(H>>7) &&  (MEM_temp>>15) &&  (RESULT_S_temp>>15));  // H7 & /M15 & /R15 | /H7 & M15 & R15
-         STATUS_N = (RESULT_S_temp>>15);
-         if(RESULT_S_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         if(MEM_temp > INDEX_temp) STATUS_C = 1; else STATUS_C = 0;
-         break;
-
-      case 0x66: // ROR oprx8,X (IX1) - Rotate Right through Carry
-         PC++;
-         oprx8_temp = memory[PC++];
-         m_temp = memory[H * 0x100 + X + oprx8_temp];
-         sprintf(disassembleText,"ROR %02X,%04X",oprx8_temp,H * 0x100 + X);
-         RESULT_temp = (STATUS_C << 7);
-         STATUS_C = m_temp & 0x01;
-         RESULT_temp += (m_temp >> 1) & 0x7F;
-         STATUS_N = (RESULT_temp >> 7) & 0x01;
-         STATUS_V = STATUS_N ^ STATUS_C;
-         if(RESULT_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         memory[H * 0x100 + X + oprx8_temp] = RESULT_temp;
-         break;
-
-      case 0x6C: // INC oprx8,X (IX1) - Increment
-         PC++;
-         oprx8_temp = memory[PC++];
-         RESULT_S_temp = memory[H * 0x100 + X + oprx8_temp];
-         memory[H * 0x100 + X + oprx8_temp] = ++RESULT_S_temp;
-         sprintf(disassembleText,"INC %02X,%04X",oprx8_temp,H * 0x100 + X);
-
-         if(RESULT_S_temp == 0x80) STATUS_V = 1; else STATUS_V = 0;
-         STATUS_N = (RESULT_S_temp >> 7) & 0x01;
-         if((RESULT_S_temp & 0xFF) == 0) STATUS_Z = 1;else STATUS_Z = 0;
-         break;
-
-      case 0x6D: // TST oprx8,X (IX1) - Test for Negative or Zero
-         PC++;
-         oprx8_temp = memory[PC++];
-         m_temp = memory[H * 0x100 + X + oprx8_temp];
-         sprintf(disassembleText,"TST %02X,%04X",oprx8_temp,H * 0x100 + X);
-         STATUS_V = 0;
-         STATUS_N = (m_temp >> 7) & 0x01;
-         if(m_temp == 0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-         break;
-
-      case 0x6E: // MOV #opr8i,opr8a (IMM/DIR) - Move
-         PC +=1;
-         IMM_temp = memory[PC++];
-         ADDR_temp = memory[PC++];
-         memory[ADDR_temp] = IMM_temp;
-         sprintf(disassembleText,"MOV #%02X,%02X",IMM_temp,ADDR_temp);
-         STATUS_V = 0;
-         STATUS_N = (IMM_temp >> 7) & 0x01;
-         if(IMM_temp==0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-         break;
-
-      case 0x6F: // CLR CLR oprx8,X (IX1) - Clear memory pointed to by H:X
-         PC++;
-         oprx8_temp = memory[PC++];
-         memory[H * 0x100 + X + oprx8_temp] = 0;
-         STATUS_V = 0;
-         STATUS_N = 0;
-         STATUS_Z = 1;
-         sprintf(disassembleText,"CLR %02X,%04X",oprx8_temp,H * 0x100 + X);
-         break;
-
-      case 0x76: // ROR ,X (IX) - Rotate Right through Carry
-         PC++;
-         m_temp = memory[H * 0x100 + X];
-         sprintf(disassembleText,"ROR ,%04X",H * 0x100 + X);
-         RESULT_temp = (STATUS_C << 7);
-         STATUS_C = m_temp & 0x01;
-         RESULT_temp += (m_temp >> 1) & 0x7F;
-         STATUS_N = (RESULT_temp >> 7) & 0x01;
-         STATUS_V = STATUS_N ^ STATUS_C;
-         if(RESULT_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         memory[H * 0x100 + X] = RESULT_temp;
-         break;
-
-      case 0x7A: // DEC ,X (IX) - Decrement
-         PC++;
-         RESULT_temp = memory[H*0x100 + X];
-         RESULT_temp--;
-         memory[H*0x100 + X] = RESULT_temp;
-         if(RESULT_temp == 0x7F) STATUS_V = 1;
-         else STATUS_V = 0;
-         STATUS_N = (RESULT_temp >> 7) & 0x01;
-         if((RESULT_temp & 0xFF) == 0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-         sprintf(disassembleText,"DEC ,#%04X",H*0x100+X);
-         break;
-
-      case 0x7B: // DBNZ ,X, rel (IX) - Decrement and Branch if Not Zero
-         PC++;
-         rel_temp = memory[PC++];
-         m_temp = memory[H * 0x100 + X];
-         memory[H * 0x100 + X] = --m_temp;
-         sprintf(disassembleText,"DBNZ %04X,%d",H * 0x100 + X,(char)rel_temp);
-         if(m_temp != 0) {
-               PC = PC + (char)rel_temp;
-         }
-         break;
-
-      case 0x7C: // INC - INC ,X (IX) - Increment
-         PC++;
-         RESULT_S_temp = memory[H*0x100 + X];
-         RESULT_S_temp++;
-         memory[H*0x100 + X] = RESULT_S_temp;
-
-         if(RESULT_S_temp == 0x80) STATUS_V = 1;
-         else STATUS_V = 0;
-
-         STATUS_N = (RESULT_S_temp >> 7) & 0x01;
-
-         if((RESULT_S_temp & 0xFF) == 0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-
-         sprintf(disassembleText,"INC ,#%04X",H*0x100+X);
-         break;
-
-      case 0x7F: // CLR ,X (IX)  - Clear memory pointed to by H:X
-         PC++;
-         memory[H*0x100 + X] = 0;
-         STATUS_V = 0;
-         STATUS_N = 0;
-         STATUS_Z = 1;
-         sprintf(disassembleText,"CLR ,#%04X",H*0x100+X);
-         break;
-
-      case 0x80: // RTI (INH) - Return from Interrupt
-         m_temp = memory[++SP];     // SP ← SP + $0001; pull (CCR) - Restore CCR from stack
-         STATUS_V = (m_temp & 0x80) >> 7; STATUS_H = (m_temp & 0x10) >> 4; STATUS_I = (m_temp & 0x08) >> 3;
-         STATUS_N = (m_temp & 0x04) >> 2; STATUS_Z = (m_temp & 0x02) >> 1; STATUS_C = (m_temp & 0x01);
-         A = memory[++SP];          // SP ← SP + $0001; pull (A) - Restore A from stack
-         X = memory[++SP];          // SP ← SP + $0001; pull (X) - Restore X from stack
-         PCH_temp = memory[++SP];   // SP ← SP + $0001; pull (PCH) - Restore PCH from stack
-         PCL_temp = memory[++SP];   // SP ← SP + $0001; pull (PCL) - Restore PCL from stack
-         PC = PCH_temp * 0x100 + PCL_temp;
-
-         // TODO: NOT IMPLEMENTED
-         // If this instruction causes the I bit to change from 1 to 0, a one bus
-         // cycle delay is imposed before interrupts are allowed. This ensures that the next instruction after an
-         // RTI instruction will always be executed, even if an interrupt was pending before the RTI instruction
-         //was executed and bit 3 of the CCR value on the stack cleared.
-
-         sprintf(disassembleText,"RTI #%04X",PC);
-         break;
-
-      case 0x81: // RTS (INH) - Return from Subroutine
-         PCH_temp = memory[++SP];
-         PCL_temp = memory[++SP];
-         PC = PCH_temp * 0x100 + PCL_temp;
-         sprintf(disassembleText,"RTS #%04X",PC);
-         break;
-
-      case 0x84: // TAP (INH) - Transfer Accumulator to Processor Status Byte
-         PC +=1;
-         STATUS_V = (A & 0x80) >> 7; STATUS_H = (A & 0x10) >> 4; STATUS_I = (A & 0x08) >> 3;
-         STATUS_N = (A & 0x04) >> 2; STATUS_Z = (A & 0x02) >> 1; STATUS_C = (A & 0x01);
-         sprintf(disassembleText,"TAP");
-         break;
-
-      case 0x85: // TPA (INH) - Transfer Processor Status Byte to Accumulator
-         PC +=1;
-         A = (STATUS_V << 7) + (STATUS_H << 4) + (STATUS_I << 3) + (STATUS_N << 2) + (STATUS_Z << 1) + (STATUS_C) + 0x60;
-         sprintf(disassembleText,"TPA");
-         break;
-
-      case 0x86: // PULA (INH) - Pull Accumulator from Stack
-         PC +=1;
-         SP++;
-         A = memory[SP];
-         sprintf(disassembleText,"PULA");
-         break;
-
-      case 0x87: // PSHA (INH) - Push Accumulator onto Stack
-         PC +=1;
-         memory[SP--] = A;
-         sprintf(disassembleText,"PSHA");
-         break;
-
-      case 0x88: // PULX (INH) - Pull X (Index Register Low) from Stack
-         PC +=1;
-         SP++;
-         X = memory[SP];
-         sprintf(disassembleText,"PULX");
-         break;
-
-      case 0x89: // PSHX (INH) - Push X (Index Register Low) onto Stack
-         PC += 1;
-         memory[SP--] = X;
-         sprintf(disassembleText,"PSHX");
-         break;
-
-      case 0x8A: // PULH (INH) - Pull H (Index Register High) from Stack
-         PC +=1;
-         SP++;
-         H = memory[SP];
-         sprintf(disassembleText,"PULH");
-         break;
-
-      case 0x8B: // PSHH (INH) - Push H (Index Register High) onto Stack
-         PC += 1;
-         memory[SP--] = H;
-         sprintf(disassembleText,"PSHH");
-         break;
-
-      case 0x8C: // CLRH (INH-A) - Clear
-         PC++;
-         H = 0x00;
-         sprintf(disassembleText,"CLRH");
-         STATUS_V = 0;
-         STATUS_N = 0;
-         STATUS_Z = 1;
-         break;
-
-      case 0x91: // BLT rel (REL) - Branch if Less Than (Signed Operands)
-         PC++;
-         rel_temp = memory[PC++];
-         sprintf(disassembleText,"BLT #%d",(char)rel_temp);
-         if((STATUS_N ^ STATUS_V)  == 1)
-            PC = PC + (char)rel_temp;
-         break;
-
-      case 0x94: // TXS (INH) - Transfer Index Register to Stack Pointer
-         PC +=1;
-         SP = (H*0x100+X)-1;
-         sprintf(disassembleText,"TXS");
-         break;
-
-      case 0x95: // TSX INH - Transfer Stack Pointer to Index Register
-         PC +=1;
-         H = ((SP + 1) & 0xFF00 ) >> 8;
-         X = ((SP + 1) & 0x00FF );
-         sprintf(disassembleText,"TSX");
-         break;
-
-      case 0x96: // STHX opr16a (EXT) - Store Index Register
-         PC++;
-         opr16a  = memory[PC++] * 0x100;
-         opr16a += memory[PC++];
-         memory[opr16a] = H;
-         memory[opr16a + 1] = X;
-         sprintf(disassembleText,"STHX %04X",opr16a);
-         break;
-
-      case 0x97: // TAX INH - Transfer Accumulator to X (Index Register Low)
-         PC +=1;
-         X = A;
-         sprintf(disassembleText,"TAX");
-         break;
-
-      case 0x9B: // SEI Set Interrupt Mask Bit
-         PC++;
-         sprintf(disassembleText,"SEI");
-         STATUS_I = 1;
-         break;
-
-      case 0x9D: // NOP (INH) - No Operation
-         PC++;
-         sprintf(disassembleText,"NOP");
-         break;
-
-
-      case 0x9E: // Page 2
-         PC++;
-         switch(memory[PC])
-         {
-            case 0x69: // ROL oprx8,SP (SP1) - Rotate Left through Carry
-               PC++;
-               oprx8_temp = memory[PC++];
-               m_temp = memory[SP + oprx8_temp];
-               sprintf(disassembleText,"ROL %04X",SP + oprx8_temp);
-
-               RESULT_temp = (m_temp << 1) + STATUS_C;
-               STATUS_C = (m_temp >> 7) & 0x01;
-               STATUS_N = (RESULT_temp >> 7) & 0x01;
-               STATUS_V = STATUS_N ^ STATUS_C;
-               if(RESULT_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-               memory[SP + oprx8_temp] = RESULT_temp;
-               break;
-
-            case 0x6B: // DBNZ oprx8,SP,rel (SP1) - Decrement and Branch if Not Zero
-               PC++;
-               oprx8_temp = memory[PC++];
-               rel_temp = memory[PC++];
-               memory[SP + oprx8_temp]--;
-               MEM_temp = memory[SP + oprx8_temp];
-
-               sprintf(disassembleText,"DBNZ %04X,%d",SP + oprx8_temp,(char)rel_temp);
-               MEM_temp--;
-               if(MEM_temp != 0) {
-                     PC = PC + (char)rel_temp;
-               }
-               break;
-
-            case 0xAE: // LDHX ,X (IX) - Load Index Register from Memory
-               PC++;
-               PCH_temp = memory[H * 0x100 + X];
-               PCL_temp = memory[H * 0x100 + X + 1];
-               sprintf(disassembleText,"LDHX %04X",H * 0x100 + X);
-               H = PCH_temp;
-               X = PCL_temp;
-               STATUS_V = 0;
-               STATUS_N = (H >> 7) & 0x01;
-               if(H==0 && X==0) STATUS_Z = 1; else STATUS_Z = 0;
-               break;
-
-            case 0xCE: // LDHX oprx8,X (IX1) - Load Index Register from Memory
-               PC++;
-               oprx8_temp = memory[PC++];
-               PCH_temp = memory[H * 0x100 + X + oprx8_temp];
-               PCL_temp = memory[H * 0x100 + X + oprx8_temp + 1];
-               sprintf(disassembleText,"LDHX %04X",H * 0x100 + X + oprx8_temp);
-               H = PCH_temp;
-               X = PCL_temp;
-               STATUS_V = 0;
-               STATUS_N = (H >> 7) & 0x01;
-               if(H==0 && X==0) STATUS_Z = 1;
-               else STATUS_Z = 0;
-               break;
-
-            case 0xE1: // CMP oprx8,SP (SP1) - Compare Accumulator with Memory
-               PC++;
-               oprx8_temp = memory[PC++];
-               r_temp = memory[SP + oprx8_temp];
-
-               RESULT_temp = (signed char)A - (signed char)r_temp;
-
-               //V flag - 2's complement overflow
-               STATUS_V = ( (A >> 7) && !(r_temp >> 7) && !(RESULT_temp >> 7)) ||
-                          (!(A >> 7) &&  (r_temp >> 7) &&  (RESULT_temp >> 7));  // A7 & /M7 & /R7 | /A7 & M7 & /R7
-
-               STATUS_N = (RESULT_temp >> 7);
-
-               if(RESULT_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-
-               if(r_temp > A) STATUS_C = 1; else STATUS_C = 0;
-
-               sprintf(disassembleText,"CMP %02X,%04X",oprx8_temp,SP);
-               break;
-
-
-            case 0xE6: // LDA oprx8,SP (SP1) - Load Accumulator from Memory
-               PC++;
-               oprx8_temp = memory[PC++];
-               A = memory[SP + oprx8_temp];
-               sprintf(disassembleText,"LDA %04X",SP + oprx8_temp);
-               STATUS_V = 0;
-               STATUS_N = (A >> 7) & 0x01;
-               if(A==0) STATUS_Z = 1; else STATUS_Z = 0;
-               break;
-
-            case 0xE7: // STA oprx8,SP (SP1) - Store Accumulator in Memory
-               PC++;
-               oprx8_temp = memory[PC++];
-               memory[SP + oprx8_temp] = A;
-               sprintf(disassembleText,"STA %04X",SP + oprx8_temp);
-               STATUS_V = 0;
-               STATUS_N = (A >> 7) & 0x01;
-               if(A==0) STATUS_Z = 1; else STATUS_Z = 0;
-               break;
-
-            case 0xEB: // ADD oprx8,SP (SP1) - Add without Carry
-               PC++;
-               oprx8_temp = memory[PC++];
-               m_temp = memory[SP + oprx8_temp];
-               r_temp = A + m_temp;
-               A = r_temp;
-               A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
-               A3 = (A & 0x08) >> 3; M3 = (m_temp & 0x08) >> 3; R3 = (r_temp & 0x08) >> 3;
-               STATUS_V = (A7 && M7 && !R7) || (!A7 && !M7 && R7);  // A7 & M7 & /R7 | /A7 & /M7 & R7 - flag - 2's complement overflow
-               STATUS_H = (A3 && M3) || (M3 && !R3) || (!R3 && A3);  // A3 & M3 | M3 & /R3 | /R3 & A3
-               STATUS_N = R7;
-               if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-               STATUS_C = (A7 && M7) || (M7 && !R7) || (!R7 && A7);  // A7 & M7 | M7 & !R7 | !R7 & A7*/
-               sprintf(disassembleText,"ADD %02X,%04X",oprx8_temp,SP);
-               break;
-
-            case 0xEE: // LDX oprx8,SP (SP1) - Load X (Index Register Low) from Memory
-               PC++;
-               oprx8_temp = memory[PC++];
-               X_temp = memory[SP + oprx8_temp];
-               STATUS_V = 0;
-               STATUS_N = (X_temp >> 7) & 0x01;
-               if(X_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-               sprintf(disassembleText,"LDX %02X,%04X",oprx8_temp,SP);
-               X = X_temp;
-               break;
-
-            case 0xF3: // CPHX oprx8,SP (SP1) - Compare Index Register with Memory
-               PC++;
-               oprx8_temp = memory[PC++];
-
-               sprintf(disassembleText,"CPHX %02X,%04X",oprx8_temp,SP);
-
-               MEM_temp = memory[SP + oprx8_temp] * 100 + memory[SP + oprx8_temp + 1];
-               INDEX_temp = H * 0x100 + X;
-
-               RESULT_S_temp = (short)INDEX_temp - (short)MEM_temp;
-
-               //V flag - 2's complement overflow
-               STATUS_V = ( (H>>7) && !(MEM_temp>>15) && !(RESULT_S_temp>>15)) ||
-                          (!(H>>7) &&  (MEM_temp>>15) &&  (RESULT_S_temp>>15));  // H7 & /M15 & /R15 | /H7 & M15 & R15
-
-               STATUS_N = (RESULT_S_temp>>15);
-
-               if(RESULT_S_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-
-               if(MEM_temp > INDEX_temp) STATUS_C = 1; else STATUS_C = 0;
-
-               break;
-
-
-            case 0xFE: // LDHX oprx8,SP (SP1) - Load Index Register from Memory
-               PC++;
-               oprx8_temp = memory[PC++];
-               PCH_temp = memory[SP + oprx8_temp];
-               PCL_temp = memory[SP + oprx8_temp + 1];
-               sprintf(disassembleText,"LDHX %02X,%04X",oprx8_temp,SP);
-               H = PCH_temp;
-               X = PCL_temp;
-               STATUS_V = 0;
-               STATUS_N = (H >> 7) & 0x01;
-               if(H == 0 && X == 0) STATUS_Z = 1; else STATUS_Z = 0;
-               break;
-
-            case 0xFF: // STHX oprx8,SP (SP1) - Store Index Register
-               PC++;
-               oprx8_temp = memory[PC++];
-               memory[SP + oprx8_temp] = H;
-               memory[SP + oprx8_temp + 1] = X;
-               sprintf(disassembleText,"STHX %02X,%04X",oprx8_temp,SP);
-               STATUS_V = 0;
-               STATUS_N = (H >> 7) & 0x01;
-               if(H == 0 && X == 0) STATUS_Z = 1; else STATUS_Z = 0;
-               break;
-
-            default:
-               sprintf(disassembleText,"Unknown opcode: 9E%02X, inst. count: %d",memory[PC],instructionCounter);
-               PC--;
-               break;
-         }
-         break;
-
-
-      case 0x9F: // TXA (INH) - Transfer X (Index Register Low) to Accumulator
-         PC++;
-         A = X;
-         sprintf(disassembleText,"TXA");
-         break;
-
-      case 0x9A: // CLI (INH) - Clear Interrupt Mask Bit
-         PC++;
-         STATUS_I = 0;
-         sprintf(disassembleText,"CLI");
-         break;
-
-      case 0xA0: // SUB #opr8i (IMM) - Subtract
-         PC++;
-         m_temp = memory[PC++];
-         sprintf(disassembleText,"SUB #%02X",m_temp);
-         r_temp = A - m_temp;
-         A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
-         STATUS_V = (A7 && !M7 && !R7) || (!A7 && M7 && R7);  // A7 & !M7 & !R7 | !A7 & M7 & R7 - flag - 2's complement overflow
-         STATUS_N = R7;
-         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         STATUS_C = (!A7 && M7) || (M7 && R7) || (R7 && !A7);  // !A7 & M7 | M7 & R7 | R7 & !A7
-         A = r_temp;
-         break;
-
-      case 0xA1: // CMP #opr8i IMM - Compare Accumulator with Memory
-         PC++;
-         IMM_temp = memory[PC++];
-
-         RESULT_temp = (signed char)A - (signed char)IMM_temp;
-
-         //V flag - 2's complement overflow
-         STATUS_V = ( (A>>7) && !(IMM_temp>>7) && !(RESULT_temp>>7)) ||
-                    (!(A>>7) &&  (IMM_temp>>7) &&  (RESULT_temp>>7));  // A7 & /M7 & /R7 | /A7 & M7 & /R7
-
-         STATUS_N = (RESULT_temp >> 7);
-
-         if(RESULT_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-
-         if(IMM_temp > A) STATUS_C = 1; else STATUS_C = 0;
-
-         sprintf(disassembleText,"CMP #%02X",IMM_temp);
-         break;
-
-      case 0xA4: // AND #opr8i IMM - Logical AND
-         PC++;
-         IMM_temp = memory[PC++];
-         A = A & IMM_temp;
-         sprintf(disassembleText,"AND #%02X",IMM_temp);
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-         break;
-
-      case 0xA5: // BIT #opr8i IMM - Bit Test
-         PC++;
-         IMM_temp = memory[PC++];
-         RESULT_temp = A & IMM_temp;
-         sprintf(disassembleText,"BIT #%02X",IMM_temp);
-         STATUS_V = 0;
-         STATUS_N = (RESULT_temp >> 7) & 0x01;
-         if(RESULT_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0xA6: // LDA #opr8i IMM - Load Accumulator from Memory
-         PC++;
-         IMM_temp = memory[PC++];
-         A = IMM_temp;
-         sprintf(disassembleText,"LDA #%02X",IMM_temp);
-         STATUS_V = 0;
-         STATUS_N = (IMM_temp >> 7) & 0x01;
-         if(IMM_temp == 0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-         break;
-
-      case 0xA7: // AIS #opr8i - Add Immediate Value (Signed) to Stack Pointer
-         PC++;
-         SP += (char)memory[PC];
-         sprintf(disassembleText,"AIS #%02d",(char)memory[PC++]);
-         break;
-
-      case 0xA9: // ADC #opr8i (IMM) - Add with Carry
-         PC++;
-         m_temp = memory[PC++];
-         r_temp = A + m_temp + STATUS_C;
-         A = r_temp;
-         A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
-         A3 = (A & 0x08) >> 3; M3 = (m_temp & 0x08) >> 3; R3 = (r_temp & 0x08) >> 3;
-         STATUS_V = (A7 && M7 && !R7) || (!A7 && !M7 && R7);  // A7 & M7 & /R7 | /A7 & /M7 & R7 - flag - 2's complement overflow
-         STATUS_H = (A3 && M3) || (M3 && !R3) || (!R3 && A3);  // A3 & M3 | M3 & /R3 | /R3 & A3
-         STATUS_N = R7;
-         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         STATUS_C = (A7 && M7) || (M7 && !R7) || (!R7 && A7);  // A7 & M7 | M7 & !R7 | !R7 & A7*/
-         sprintf(disassembleText,"ADC #%02X",m_temp);
-         break;
-
-      case 0xAA: // ORA #opr8i (IMM) - Inclusive-OR Accumulator and Memory
-         PC++;
-         IMM_temp = memory[PC++];
-         A = A | IMM_temp;
-         sprintf(disassembleText,"ORA #%02X",IMM_temp);
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-         break;
-
-      case 0xAB: // ADD ADD #opr8i (IMM) - Add without Carry
-         PC++;
-         m_temp = memory[PC++];
-         r_temp = A + m_temp;
-         A = r_temp;
-         A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
-         A3 = (A & 0x08) >> 3; M3 = (m_temp & 0x08) >> 3; R3 = (r_temp & 0x08) >> 3;
-         STATUS_V = (A7 && M7 && !R7) || (!A7 && !M7 && R7);  // A7 & M7 & /R7 | /A7 & /M7 & R7 - flag - 2's complement overflow
-         STATUS_H = (A3 && M3) || (M3 && !R3) || (!R3 && A3);  // A3 & M3 | M3 & /R3 | /R3 & A3
-         STATUS_N = R7;
-         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         STATUS_C = (A7 && M7) || (M7 && !R7) || (!R7 && A7);  // A7 & M7 | M7 & !R7 | !R7 & A7*/
-         sprintf(disassembleText,"ADD #%02X",m_temp);
-         break;
-
-      case 0xAD: // BSR rel (REL) - Branch to Subroutine
-         PC++;
-         ADDR_temp = memory[PC++];
-         memory[SP--] = (PC & 0x00FF);
-         memory[SP--] = (PC & 0xFF00) >> 8;
-         PC+= (char)ADDR_temp;
-         sprintf(disassembleText,"BSR #%04X",PC);
-         break;
-
-      case 0xAE: // LDX #opr8i IMM - Load X (Index Register Low) from Memory
-         PC++;
-         IMM_temp = memory[PC++];
-         X = IMM_temp;
-         sprintf(disassembleText,"LDX #%02X",IMM_temp);
-         STATUS_V = 0;
-         STATUS_N = (IMM_temp >> 7) & 0x01;
-         if(IMM_temp == 0) STATUS_Z = 1;else STATUS_Z = 0;
-         break;
-
-      case 0xAF: // AIX #opr8i IMM AF - AIX Add Immediate Value (Signed) to Index Register
-         PC++;
-         INDEX_temp = H*0x100 + X + (char)memory[PC];
-         H = (INDEX_temp & 0xFF00) >> 8;
-         X = INDEX_temp & 0x00FF;
-         sprintf(disassembleText,"AIX #%d",(char)memory[PC++]);
-         break;
-
-      case 0xB1: // CMP opr8a (DIR) - Compare Accumulator with Memory
-         PC++;
-         opr8a_temp = memory[PC++];
-         m_temp = memory[opr8a_temp];
-         r_temp = (signed char)A - (signed char)m_temp;
-         //V flag - 2's complement overflow
-         STATUS_V = ( (A >> 7) && !(m_temp >> 7) && !(r_temp >> 7)) ||
-                    (!(A >> 7) &&  (m_temp >> 7) &&  (r_temp >> 7));  // A7 & /M7 & /R7 | /A7 & M7 & /R7
-         STATUS_N = (r_temp >> 7);
-         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         if(m_temp > A) STATUS_C = 1; else STATUS_C = 0;
-         sprintf(disassembleText,"CMP %02X",opr8a_temp);
-         break;
-
-      case 0xB6: // LDA opr8a (DIR) - Load Accumulator from Memory
-         PC++;
-         opr8a_temp = memory[PC++];
-         A = memory[opr8a_temp];
-         sprintf(disassembleText,"LDA %02X",opr8a_temp);
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0xB7: // STA opr8a (DIR) - Store Accumulator in Memory
-         PC++;
-         opr8a_temp = memory[PC++];
-         memory[opr8a_temp] = A;
-         sprintf(disassembleText,"STA %02X",opr8a_temp);
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0xBF: // STX opr8a (DIR) - Store X (Index Register Low) in Memory
-         PC++;
-         opr8a_temp = memory[PC++];
-         memory[opr8a_temp] = X;
-         sprintf(disassembleText,"STX %02X",opr8a_temp);
-         STATUS_V = 0;
-         STATUS_N = (X >> 7) & 0x01;
-         if(X == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0xC0: // SUB opr16a (EXT) - Subtract
-         PC++;
-         opr16a  = memory[PC++] * 0x100;
-         opr16a += memory[PC++];
-         m_temp = memory[opr16a];
-         sprintf(disassembleText,"SUB %04X",opr16a);
-         r_temp = A - m_temp;
-         A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
-         STATUS_V = (A7 && !M7 && !R7) || (!A7 && M7 && R7);  // A7 & !M7 & !R7 | !A7 & M7 & R7 - flag - 2's complement overflow
-         STATUS_N = R7;
-         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         STATUS_C = (!A7 && M7) || (M7 && R7) || (R7 && !A7);  // !A7 & M7 | M7 & R7 | R7 & !A7
-         A = r_temp;
-         break;
-
-      case 0xC1: // CMP opr16a (EXT) - Compare Accumulator with Memory
-         PC++;
-         opr16a  = memory[PC++] * 0x100;
-         opr16a += memory[PC++];
-         m_temp = memory[opr16a];
-         r_temp = (signed char)A - (signed char)m_temp;
-         //V flag - 2's complement overflow
-         STATUS_V = ( (A >> 7) && !(m_temp >> 7) && !(r_temp >> 7)) ||
-                    (!(A >> 7) &&  (m_temp >> 7) &&  (r_temp >> 7));  // A7 & /M7 & /R7 | /A7 & M7 & /R7
-         STATUS_N = (r_temp >> 7);
-         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         if(m_temp > A) STATUS_C = 1; else STATUS_C = 0;
-         sprintf(disassembleText,"CMP %04X",opr16a);
-         break;
-
-      case 0xC2: // SBC opr16a (EXT) - Subtract with Carry
-         PC++;
-         opr16a  = memory[PC++] * 0x100;
-         opr16a += memory[PC++];
-         m_temp = memory[opr16a];
-         sprintf(disassembleText,"SBC %04X",opr16a);
-         r_temp = A - m_temp - STATUS_C;
-         A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
-         STATUS_V = (A7 && !M7 && !R7) || (!A7 && M7 && R7);  // A7 & !M7 & !R7 | !A7 & M7 & R7 - flag - 2's complement overflow
-         STATUS_N = R7;
-         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         STATUS_C = (!A7 && M7) || (M7 && R7) || (R7 && !A7);  // !A7 & M7 | M7 & R7 | R7 & !A7
-         A = r_temp;
-         break;
-
-      case 0xC6: // LDA opr16a EXT : Load Accumulator from Memory
-         PC ++;
-         H_temp = memory[PC++];
-         X_temp = memory[PC++];
-         A = memory[H_temp * 0x100 + X_temp];
-         sprintf(disassembleText,"LDA %04X",H_temp * 0x100 + X_temp);
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A==0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-         break;
-
-      case 0xC7: // STA opr16a EXT : Store Accumulator in Memory
-         PC +=1;
-         H_temp = memory[PC++];
-         X_temp = memory[PC++];
-         memory[H_temp*0x100+X_temp] = A;
-         sprintf(disassembleText,"STA %04X",H_temp*0x100+X_temp);
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A==0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-         break;
-
-      case 0xCC: // JMP opr16a EXT - Jump
-         PC++;
-         PCH_temp = memory[PC++];
-         PCL_temp = memory[PC++];
-         PC = PCH_temp * 0x100 + PCL_temp;
-         sprintf(disassembleText,"JMP #%04X",PCH_temp * 0x100 + PCL_temp);
-         break;
-
-      case 0xCD: // JSR opr16a EXT - Jump to Subroutine
-         PC++;
-         PCH_temp = memory[PC++];
-         PCL_temp = memory[PC++];
-         memory[SP--] = (PC & 0x00FF);
-         memory[SP--] = (PC & 0xFF00) >> 8;
-         PC = PCH_temp * 0x100 + PCL_temp;
-         sprintf(disassembleText,"JSR #%04X",PCH_temp * 0x100 + PCL_temp);
-         break;
-
-      case 0xCE: // LDX opr16a EXT - Load X (Index Register Low) from Memory
-         PC ++;
-         H_temp = memory[PC++];
-         X_temp = memory[PC++];
-         X = memory[H_temp * 0x100 + X_temp];
-         sprintf(disassembleText,"LDX %04X",H_temp * 0x100 + X_temp);
-         STATUS_V = 0;
-         STATUS_N = (X >> 7) & 0x01;
-         if(X == 0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-         break;
-
-      case 0xCF: // STX opr16a (EXT) : Store X (Index Register Low) in Memory
-         PC++;
-         oprx16a  = memory[PC++] * 0x100;
-         oprx16a += memory[PC++];
-         memory[oprx16a] = X;
-         sprintf(disassembleText,"STX %04X",oprx16a);
-         STATUS_V = 0;
-         STATUS_N = (X >> 7) & 0x01;
-         if(X == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0xD6: // LDA oprx16,X (IX2) : Load Accumulator from Memory
-         PC++;
-         oprx16a  = memory[PC++] * 0x100;
-         oprx16a += memory[PC++];
-         A = memory[oprx16a + (H*0x100+X)];
-         sprintf(disassembleText,"LDA %04X,%04X",oprx16a,H * 0x100 + X);
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A==0) STATUS_Z = 1;
-         else STATUS_Z = 0;
-         break;
-
-      case 0xD7: // STA oprx16,X (IX2) - Store Accumulator in Memory
-         PC++;
-         oprx16a  = memory[PC++] * 0x100;
-         oprx16a += memory[PC++];
-         memory[H * 0x100 + X + oprx16a] = A;
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         sprintf(disassembleText,"STA %04X,%04X",oprx16a,H*0x100+X);
-         break;
-
-      case 0xDE: // LDX oprx16,X (IX2) - Load X (Index Register Low) from Memory
-         PC++;
-         oprx16a  = memory[PC++] * 0x100;
-         oprx16a += memory[PC++];
-         X_temp = memory[H * 0x100 + X + oprx16a];
-         STATUS_V = 0;
-         STATUS_N = (X_temp >> 7) & 0x01;
-         if(X_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         sprintf(disassembleText,"LDX %04X,%04X",oprx16a,H * 0x100 + X);
-         X = X_temp;
-         break;
-
-
-      case 0xE0: // SUB oprx8,X (IX1) - Subtract
-         PC++;
-         oprx8_temp = memory[PC++];
-         m_temp = memory[H * 0x100 + X + oprx8_temp];
-         sprintf(disassembleText,"SUB %04X",H*0x100+X+oprx8_temp);
-         r_temp = A - m_temp;
-         A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
-         STATUS_V = (A7 && !M7 && !R7) || (!A7 && M7 && R7);  // A7 & !M7 & !R7 | !A7 & M7 & R7 - flag - 2's complement overflow
-         STATUS_N = R7;
-         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         STATUS_C = (!A7 && M7) || (M7 && R7) || (R7 && !A7);  // !A7 & M7 | M7 & R7 | R7 & !A7
-         A = r_temp;
-         break;
-
-      case 0xE1: // CMP oprx8,X (IX1) - Compare Accumulator with Memory
-         PC++;
-         oprx8_temp = memory[PC++];
-         r_temp = memory[H * 0x100 + X + oprx8_temp];
-
-         RESULT_temp = (signed char)A - (signed char)r_temp;
-
-         //V flag - 2's complement overflow
-         STATUS_V = ( (A >> 7) && !(r_temp >> 7) && !(RESULT_temp >> 7)) ||
-                    (!(A >> 7) &&  (r_temp >> 7) &&  (RESULT_temp >> 7));  // A7 & /M7 & /R7 | /A7 & M7 & /R7
-
-         STATUS_N = (RESULT_temp >> 7);
-
-         if(RESULT_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-
-         if(r_temp > A) STATUS_C = 1; else STATUS_C = 0;
-
-         sprintf(disassembleText,"CMP %02X,%04X",oprx8_temp,H * 0x100 + X);
-         break;
-
-      case 0xE2: // SBC oprx8,X (IX1) - Subtract with Carry
-         PC++;
-         oprx8_temp = memory[PC++];
-         m_temp = memory[H * 0x100 + X + oprx8_temp];
-         sprintf(disassembleText,"SBC %04X",H*0x100+X+oprx8_temp);
-         r_temp = A - m_temp - STATUS_C;
-         A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
-         STATUS_V = (A7 && !M7 && !R7) || (!A7 && M7 && R7);  // A7 & !M7 & !R7 | !A7 & M7 & R7 - flag - 2's complement overflow
-         STATUS_N = R7;
-         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         STATUS_C = (!A7 && M7) || (M7 && R7) || (R7 && !A7);  // !A7 & M7 | M7 & R7 | R7 & !A7
-         A = r_temp;
-         break;
-
-      case 0xE6: // LDA oprx8,X (IX1) - Load Accumulator from Memory
-         PC++;
-         oprx8_temp = memory[PC++];
-         A = memory[H * 0x100 + X + oprx8_temp];
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         sprintf(disassembleText,"LDA %02X,%04X",oprx8_temp,H * 0x100 + X);
-         break;
-
-      case 0xE7: // STA oprx8,X (IX1) - Store Accumulator in Memory
-         PC++;
-         oprx8_temp = memory[PC++];
-         memory[H * 0x100 + X + oprx8_temp] = A;
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         sprintf(disassembleText,"STA %02X,%04X",oprx8_temp,H*0x100+X);
-         break;
-
-      case 0xE8: // EOR oprx8,X (IX1) - Exclusive-OR Memory with Accumulator
-         PC++;
-         oprx8_temp = memory[PC++];
-         m_temp = memory[H * 0x100 + X + oprx8_temp];
-         A ^= m_temp;
-         sprintf(disassembleText,"EOR %02X,%04X",oprx8_temp,H*0x100+X);
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0xE9: // ADC oprx8,X (IX1) - Add with Carry
-         PC++;
-         oprx8_temp = memory[PC++];
-         m_temp = memory[H * 0x100 + X + oprx8_temp];
-         r_temp = A + m_temp + STATUS_C;
-         A = r_temp;
-         A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
-         A3 = (A & 0x08) >> 3; M3 = (m_temp & 0x08) >> 3; R3 = (r_temp & 0x08) >> 3;
-         STATUS_V = (A7 && M7 && !R7) || (!A7 && !M7 && R7);  // A7 & M7 & /R7 | /A7 & /M7 & R7 - flag - 2's complement overflow
-         STATUS_H = (A3 && M3) || (M3 && !R3) || (!R3 && A3);  // A3 & M3 | M3 & /R3 | /R3 & A3
-         STATUS_N = R7;
-         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         STATUS_C = (A7 && M7) || (M7 && !R7) || (!R7 && A7);  // A7 & M7 | M7 & !R7 | !R7 & A7*/
-         sprintf(disassembleText,"ADC %02X,%04X",oprx8_temp,H*0x100+X);
-         break;
-
-      case 0xEA: // ORA oprx8,X (IX1) - Inclusive-OR Accumulator and Memory
-         PC++;
-         oprx8_temp = memory[PC++];
-         m_temp = memory[H * 0x100 + X + oprx8_temp];
-         A |= m_temp;
-         sprintf(disassembleText,"ORA %02X,%04X",oprx8_temp,H*0x100+X);
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0xEB: // ADD oprx8,X (IX1) - Add without Carry
-         PC++;
-         oprx8_temp = memory[PC++];
-         m_temp = memory[H * 0x100 + X + oprx8_temp];
-         r_temp = A + m_temp;
-         A = r_temp;
-         A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
-         A3 = (A & 0x08) >> 3; M3 = (m_temp & 0x08) >> 3; R3 = (r_temp & 0x08) >> 3;
-         STATUS_V = (A7 && M7 && !R7) || (!A7 && !M7 && R7);  // A7 & M7 & /R7 | /A7 & /M7 & R7 - flag - 2's complement overflow
-         STATUS_H = (A3 && M3) || (M3 && !R3) || (!R3 && A3);  // A3 & M3 | M3 & /R3 | /R3 & A3
-         STATUS_N = R7;
-         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         STATUS_C = (A7 && M7) || (M7 && !R7) || (!R7 && A7);  // A7 & M7 | M7 & !R7 | !R7 & A7*/
-         sprintf(disassembleText,"ADD %02X,%04X",oprx8_temp,H*0x100+X);
-         break;
-
-      case 0xEE: // LDX oprx8,X (IX1) - Load X (Index Register Low) from Memory
-         PC++;
-         oprx8_temp = memory[PC++];
-         X_temp = memory[H * 0x100 + X + oprx8_temp];
-         STATUS_V = 0;
-         STATUS_N = (X_temp >> 7) & 0x01;
-         if(X_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         sprintf(disassembleText,"LDX %02X,%04X",oprx8_temp,H * 0x100 + X);
-         X = X_temp;
-         break;
-
-      case 0xF1: // CMP ,X (IX) - Compare Accumulator with Memory
-         PC++;
-         r_temp = memory[H * 0x100 + X];
-         RESULT_temp = (signed char)A - (signed char)r_temp;
-         //V flag - 2's complement overflow
-         STATUS_V = ( (A >> 7) && !(r_temp >> 7) && !(RESULT_temp >> 7)) ||
-                    (!(A >> 7) &&  (r_temp >> 7) &&  (RESULT_temp >> 7));  // A7 & /M7 & /R7 | /A7 & M7 & /R7
-         STATUS_N = (RESULT_temp >> 7);
-         if(RESULT_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         if(r_temp > A) STATUS_C = 1; else STATUS_C = 0;
-         sprintf(disassembleText,"CMP ,%04X",H * 0x100 + X);
-         break;
-
-      case 0xF2: // SBC oprx8,X (IX) - Subtract with Carry
-         PC++;
-         m_temp = memory[H * 0x100 + X];
-         sprintf(disassembleText,"SBC %04X",H*0x100+X);
-         r_temp = A - m_temp - STATUS_C;
-         A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
-         STATUS_V = (A7 && !M7 && !R7) || (!A7 && M7 && R7);  // A7 & !M7 & !R7 | !A7 & M7 & R7 - flag - 2's complement overflow
-         STATUS_N = R7;
-         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         STATUS_C = (!A7 && M7) || (M7 && R7) || (R7 && !A7);  // !A7 & M7 | M7 & R7 | R7 & !A7
-         A = r_temp;
-         break;
-
-      case 0xF4: // AND ,X (IX) - Logical AND
-         PC++;
-         m_temp = memory[H * 0x100 + X];
-         A &= m_temp;
-         sprintf(disassembleText,"AND ,%04X",H*0x100+X);
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0xF6: // LDA ,X (IX) - Load Accumulator from Memory
-         PC++;
-         A = memory[H * 0x100 + X];
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         sprintf(disassembleText,"LDA ,%04X",H*0x100+X);
-         break;
-
-      case 0xF7: // STA ,X (IX) - Store Accumulator in Memory
-         PC++;
-         INDEX_temp = H * 0x100 + X;
-         memory[INDEX_temp] = A;
-         sprintf(disassembleText,"STA ,%04X",INDEX_temp);
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0xF8: // EOR ,X (IX) - Exclusive-OR Memory with Accumulator
-         PC++;
-         m_temp = memory[H * 0x100 + X];
-         A ^= m_temp;
-         sprintf(disassembleText,"EOR ,%04X",H*0x100+X);
-         STATUS_V = 0;
-         STATUS_N = (A >> 7) & 0x01;
-         if(A == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0xF9: // ADC ,X (IX) - Add with Carry
-         PC++;
-         m_temp = memory[H * 0x100 + X];
-         r_temp = A + m_temp + STATUS_C;
-         A = r_temp;
-         A7 = (A & 0x80) >> 7; M7 = (m_temp & 0x80) >> 7; R7 = (r_temp & 0x80) >> 7;
-         A3 = (A & 0x08) >> 3; M3 = (m_temp & 0x08) >> 3; R3 = (r_temp & 0x08) >> 3;
-         STATUS_V = (A7 && M7 && !R7) || (!A7 && !M7 && R7);  // A7 & M7 & /R7 | /A7 & /M7 & R7 - flag - 2's complement overflow
-         STATUS_H = (A3 && M3) || (M3 && !R3) || (!R3 && A3);  // A3 & M3 | M3 & /R3 | /R3 & A3
-         STATUS_N = R7;
-         if(r_temp == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         STATUS_C = (A7 && M7) || (M7 && !R7) || (!R7 && A7);  // A7 & M7 | M7 & !R7 | !R7 & A7*/
-         sprintf(disassembleText,"ADC ,%04X",H*0x100+X);
-         break;
-
-      case 0xFC: // JMP ,X IX - Jump
-         PC++;
-         PC = H * 0x100 + X;
-         sprintf(disassembleText,"JMP %04X",H * 0x100 + X);
-         break;
-
-
-      case 0xFD: // JSR ,X (IX) - Jump to Subroutine
-         PC++;
-         memory[SP--] = (PC & 0x00FF);
-         memory[SP--] = (PC & 0xFF00) >> 8;
-         PC = H * 0x100 + X;
-         sprintf(disassembleText,"JSR %04X",H * 0x100 + X);
-         break;
-
-      case 0xFE: // LDX ,X (IX) - Load X (Index Register Low) from Memory
-         PC++;
-         sprintf(disassembleText,"LDX ,%04X",H*0x100+X);
-         X = memory[H * 0x100 + X];
-         STATUS_V = 0;
-         STATUS_N = (X >> 7) & 0x01;
-         if(X == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      case 0xFF: // STX ,X (IX) - Store X (Index Register Low) in Memory
-         PC++;
-         INDEX_temp = H * 0x100 + X;
-         memory[INDEX_temp] = X;
-         sprintf(disassembleText,"STX ,%04X",INDEX_temp);
-         STATUS_V = 0;
-         STATUS_N = (X >> 7) & 0x01;
-         if(X == 0) STATUS_Z = 1; else STATUS_Z = 0;
-         break;
-
-      default:
-         sprintf(disassembleText,"Unknown opcode: %X, inst. count: %d",memory[PC],instructionCounter);
-         break;
-
-   }
-}
-
-void simMC9S08AC60::setBytecodeText(char numOfBytes, unsigned char *buffer)
-{
-   for(int i=0;i<numOfBytes;i++)
-      sprintf(bytecodeText + (i * 2),"%02X",buffer[i]);
-}
-
-
-char *simMC9S08AC60::getBytecodeText()
-{
-   return bytecodeText;
-}
-
-char *simMC9S08AC60::getAddressingModeText()
-{
-   return addressingModeText;
-}
-
-char *simMC9S08AC60::getProgramCounterAsText()
-{
-   return programCounterText;
+   return new hcs08_ProgramInstruction(ProgramCounter,str2,inst->getInstructionLength());
 }
 
 unsigned short simMC9S08AC60::getProgramCounterPrevious()
 {
-   return PC_previous;
+   return ProgramCounterPrevious;
 }
-
-
-char *simMC9S08AC60::getDisassemblyText()
-{
-   return disassembleText;
-}
-
-char *simMC9S08AC60::getConditionCodeRegisterText()
-{
-   sprintf(conditionCodeRegisterText,"CCR: V:%d H:%d I:%d N:%d Z:%d C:%d",
-      STATUS_V,
-      STATUS_H,
-      STATUS_I,
-      STATUS_N,
-      STATUS_Z,
-      STATUS_C);
-   return conditionCodeRegisterText;
-}
-
-char *simMC9S08AC60::getCPURegisterText()
-{
-   sprintf(cpuRegisterText,"A:%02X H:%02X X:%02X SP:%04X PC:%04X",A,H,X,SP,PC);
-   return cpuRegisterText;
-}
-
-int simMC9S08AC60::getInstructionLength()
-{
-   return instructionLength;
-}
-
-void simMC9S08AC60::getAddressingModeAsText(char addressingMode, char *buffer)
-{
-   switch(addressingMode)
-   {
-         case AM_NA : strcpy(buffer,"N/A" ); break;   // Not a valid opcode
-         case AM_DIR: strcpy(buffer,"DIR" ); break;   // Direct addressing mode
-         case AM_EXT: strcpy(buffer,"EXT" ); break;   // Extended addressing mode
-         case AM_IMM: strcpy(buffer,"IMM" ); break;   // Immediate addressing mode
-         case AM_INH: strcpy(buffer,"INH" ); break;   // Inherent addressing mode
-         case AM_IX0: strcpy(buffer,"IX"  ); break;   // Indexed, no offset addressing mode
-         case AM_IX1: strcpy(buffer,"IX1" ); break;   // Indexed, 8-bit offset addressing mode
-         case AM_IX2: strcpy(buffer,"IX2" ); break;   // Indexed, 16-bit offset addressing mode
-         case AM_IXP: strcpy(buffer,"IX+" ); break;   // Indexed, no offset, post increment addressing mode
-         case AM_I1P: strcpy(buffer,"IX1+" ); break;   // Indexed, no offset, post increment addressing mode
-         case AM_REL: strcpy(buffer,"REL" ); break;   // Relative addressing mode
-         case AM_SP1: strcpy(buffer,"SP1" ); break;   // Stack pointer, 8-bit offset addressing mode
-         case AM_SP2: strcpy(buffer,"SP2" ); break;   // Stack pointer 16-bit offset addressing mode
-         default: strcpy(buffer,"FAIl" ); break;
-
-   }
-}
-
-
-
 
 simMC9S08AC60::~simMC9S08AC60()
 {

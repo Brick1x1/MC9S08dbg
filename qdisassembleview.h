@@ -20,9 +20,9 @@ class QDisassembleView : public QAbstractScrollArea
       QDisassembleView(simMC9S08AC60 *cpu);
       //void setContent(unsigned char *content,int length);
 
-      void CPUSingleStep();
-      void DisassembleAll();
-      void DisassembleRange(unsigned short start_addr, unsigned short end_addr);
+      void InsertProgramInstruction(hcs08_ProgramInstruction* programInst);
+      //void DisassembleAll();
+      //void DisassembleRange(unsigned short start_addr, unsigned short end_addr);
 
    public slots:
 

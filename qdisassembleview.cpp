@@ -97,19 +97,11 @@ void QDisassembleView::WriteViewContent()
 
 }
 
-void QDisassembleView::CPUSingleStep()
+void QDisassembleView::InsertProgramInstruction(hcs08_ProgramInstruction* programInst)
 {
-   cpu->step();
-   char str[100];
-   char str2[150];
-
-   sprintf(str,"%-4s  %-6s  %s",cpu->getProgramCounterAsText(),cpu->getBytecodeText(),cpu->getDisassemblyText());
-   sprintf(str2,"%-28s %-8s %s / %s",str,cpu->getAddressingModeText(),cpu->getConditionCodeRegisterText(),cpu->getCPURegisterText());
-
-   unsigned short PC_prev = cpu->getProgramCounterPrevious();
-
-   if(programInstByAddr.find(PC_prev) == programInstByAddr.end())
-      programInstByAddr[cpu->getProgramCounterPrevious()] = new hcs08_ProgramInstruction(PC_prev,str2,cpu->getInstructionLength());
+   unsigned short startAddr = programInst->startAddr;
+   if(programInstByAddr.find(startAddr) == programInstByAddr.end())
+      programInstByAddr[startAddr] = programInst;
 
 
    //Rebuild lines in scrollview
@@ -131,7 +123,7 @@ void QDisassembleView::CPUSingleStep()
    viewport()->update();
 }
 
-void QDisassembleView::DisassembleAll()
+/*void QDisassembleView::DisassembleAll()
 {
    char str[100];
    char str2[150];
@@ -227,11 +219,11 @@ void QDisassembleView::DisassembleAll()
    }
 
    viewport()->update();
-}
+}*/
 
 
 
-void QDisassembleView::DisassembleRange(unsigned short start_addr, unsigned short end_addr)
+/*void QDisassembleView::DisassembleRange(unsigned short start_addr, unsigned short end_addr)
 {
    char str[100];
    char str2[150];
@@ -277,4 +269,4 @@ void QDisassembleView::DisassembleRange(unsigned short start_addr, unsigned shor
    }
 
    viewport()->update();
-}
+}*/

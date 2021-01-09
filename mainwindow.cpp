@@ -2,6 +2,7 @@
 #include "sim_MC9S08_S08AC60.h"
 #include "qhexviewedit.h"
 #include "qdisassembleview.h"
+#include "qcpuregisters.h"
 #include "mainwindow.h"
 
 #include <QCoreApplication>
@@ -44,7 +45,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
    memViewLayout->setSpacing(0);
 
    disassemblyView = new QDisassembleView(cpu);
-   memViewLayout->addWidget(disassemblyView);
+
+   cpuRegisters = new QCPURegisters(cpu->CPURegisters);
+   cpuRegisters->setFixedHeight(200);
+
+   QVBoxLayout *disassemblerAndCPURegisterLayout = new QVBoxLayout();
+   disassemblerAndCPURegisterLayout->addWidget(disassemblyView);
+   disassemblerAndCPURegisterLayout->addWidget(cpuRegisters);
+
+   memViewLayout->addLayout(disassemblerAndCPURegisterLayout);
 
    hexViewEdit = new QHexViewEdit();
    hexViewEdit->setFixedWidth(600);
@@ -60,27 +69,27 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 
    hexViewEdit->setContent(cpu->memory,0x10000);
 
-   //180 single step
-   /*for(int i=0;i<220;i++)
-      disassemblyView->CPUSingleStep();*/
-
-   //disassemblyView->DisassembleAll();
-
-   //disassemblyView->DisassembleRange(0x0870,0x08D4);
-   disassemblyView->DisassembleRange(0x0870,0x0E92); //10/10
-   disassemblyView->DisassembleRange(0x1860,0x1A00); //10/10
+   //OLD:disassemblyView->DisassembleRange(0x0870,0x08D4);
+   //disassemblyView->DisassembleRange(0x0870,0x0E92); //10/10
+   //disassemblyView->DisassembleRange(0x1860,0x1A00); //10/10
 
    //disassemblyView->DisassembleRange(0x6200,0xA700);
 
-   disassemblyView->DisassembleRange(0xF600,0xFF80); //10/10
+   //disassemblyView->DisassembleRange(0xF600,0xFF80); //10/10
 
    //disassemblyView->DisassembleRange(0xF600,0xF87C); //10/10
 }
 
+/*void WriteToConsole(int no)
+{
+   printf("The number is: %i\n",no);
+}*/
+
 void MainWindow::handleButton()
 {
-   disassemblyView->CPUSingleStep();
-   hexViewEdit->viewport()->update();
+   hcs08_ProgramInstruction* programInst = cpu->singleStepNew();
+   disassemblyView->InsertProgramInstruction(programInst);
+   cpuRegisters->UpdateGUI();
 }
 
 
